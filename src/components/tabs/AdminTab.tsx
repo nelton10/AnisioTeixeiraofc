@@ -1,5 +1,16 @@
 import React, { useState, useRef } from 'react';
-import { UserPlus, PlusCircle, MoveHorizontal, Trash2, XCircle, KeyRound, Lock, FileUp, Download, Clock } from 'lucide-react';
+import { 
+  UserPlus, 
+  PlusCircle, 
+  MoveHorizontal, 
+  Trash2, 
+  XCircle, 
+  KeyRound, 
+  Lock, 
+  FileUp, 
+  Clock,
+  RotateCcw // Ícone para a função de restaurar
+} from 'lucide-react';
 import * as store from '@/lib/store';
 import { Aluno, AppConfig } from '@/types';
 
@@ -26,6 +37,7 @@ const AdminTab: React.FC<AdminTabProps> = ({ alunos, config, turmasExistentes, n
   const [novoBlockEnd, setNovoBlockEnd] = useState('');
   const [novoBlockLabel, setNovoBlockLabel] = useState('');
   const [editPasswords, setEditPasswords] = useState(config.passwords);
+  const [isRestoreMode, setIsRestoreMode] = useState(false); // Define se vai somar ou substituir
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addStudent = () => {
@@ -66,10 +78,16 @@ const AdminTab: React.FC<AdminTabProps> = ({ alunos, config, turmasExistentes, n
           if (t && n) newAlunos.push({ id: store.generateId(), nome: n, turma: t });
         }
       });
+
       if (newAlunos.length) {
-        store.saveConfig({ alunosList: [...alunos, ...newAlunos] });
-        refreshData(); notify(`${newAlunos.length} alunos importados!`);
+        // Se estiver em modo restauração, ignora a lista atual (alunos) e salva só a nova
+        const finalAlunosList = isRestoreMode ? newAlunos : [...alunos, ...newAlunos];
+        store.saveConfig({ alunosList: finalAlunosList });
+        refreshData();
+        notify(isRestoreMode ? "Base de dados restaurada!" : `${newAlunos.length} alunos importados!`);
       }
+      
+      if (fileInputRef.current) fileInputRef.current.value = '';
     };
     reader.readAsText(file);
   };
@@ -111,13 +129,32 @@ const AdminTab: React.FC<AdminTabProps> = ({ alunos, config, turmasExistentes, n
         <button onClick={addStudent} className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold shadow-lg active:scale-[0.98] transition-all text-sm">Adicionar</button>
       </div>
 
-      {/* CSV Import */}
+      {/* CSV Import & Restore */}
       <div className="glass rounded-3xl p-6 shadow-lg space-y-4">
-        <h3 className="font-black text-sm flex items-center gap-2 text-foreground"><FileUp size={18} className="text-primary" /> Importar CSV</h3>
-        <p className="text-xs text-muted-foreground">Formato: TURMA,NOME (uma linha por aluno)</p>
-        <button onClick={() => fileInputRef.current?.click()} className="w-full py-4 bg-secondary hover:bg-muted text-foreground rounded-2xl font-bold border border-border transition-colors text-sm flex items-center justify-center gap-2">
-          <FileUp size={16} /> Selecionar Ficheiro CSV
-        </button>
+        <h3 className="font-black text-sm flex items-center gap-2 text-foreground"><FileUp size={18} className="text-primary" /> Gestão via CSV</h3>
+        <p className="text-xs text-muted-foreground">Formato: TURMA,NOME (Ex: 1A,NELTON COSTA)</p>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button 
+            onClick={() => { setIsRestoreMode(false); fileInputRef.current?.click(); }} 
+            className="w-full py-4 bg-secondary hover:bg-muted text-foreground rounded-2xl font-bold border border-border transition-colors text-sm flex items-center justify-center gap-2"
+          >
+            <FileUp size={16} /> Importar Dados
+          </button>
+          
+          <button 
+            onClick={() => {
+              if(confirm("CUIDADO: Isso apagará todos os alunos atuais para colocar os do arquivo. Confirmar restauração?")) {
+                setIsRestoreMode(true);
+                fileInputRef.current?.click();
+              }
+            }} 
+            className="w-full py-4 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-2xl font-bold border border-destructive/20 transition-colors text-sm flex items-center justify-center gap-2"
+          >
+            <RotateCcw size={16} /> Restaurar Base
+          </button>
+        </div>
+        
         <input type="file" accept=".csv" ref={fileInputRef} onChange={handleCsvUpload} className="hidden" />
       </div>
 
