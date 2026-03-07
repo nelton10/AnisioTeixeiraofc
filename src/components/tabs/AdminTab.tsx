@@ -9,7 +9,7 @@ import {
   Lock, 
   FileUp, 
   Clock,
-  RotateCcw // Ícone para a função de restaurar
+  RotateCcw 
 } from 'lucide-react';
 import * as store from '@/lib/store';
 import { Aluno, AppConfig } from '@/types';
@@ -37,7 +37,7 @@ const AdminTab: React.FC<AdminTabProps> = ({ alunos, config, turmasExistentes, n
   const [novoBlockEnd, setNovoBlockEnd] = useState('');
   const [novoBlockLabel, setNovoBlockLabel] = useState('');
   const [editPasswords, setEditPasswords] = useState(config.passwords);
-  const [isRestoreMode, setIsRestoreMode] = useState(false); // Define se vai somar ou substituir
+  const [isRestoreMode, setIsRestoreMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addStudent = () => {
@@ -53,6 +53,21 @@ const AdminTab: React.FC<AdminTabProps> = ({ alunos, config, turmasExistentes, n
     store.saveConfig({ alunosList: alunos.filter(a => !selectedAdminAlunos.includes(a.id)) });
     setSelectedAdminAlunos([]); setDeleteModal(false);
     refreshData(); notify("Alunos removidos!");
+  };
+
+  // NOVA FUNÇÃO: Apagar turma completa
+  const deleteEntireTurma = () => {
+    if (!adminTurmaFiltro) return;
+    const confirmacao = confirm(`PERIGO: Você está prestes a apagar TODOS os alunos da turma ${adminTurmaFiltro}. Confirma?`);
+    
+    if (confirmacao) {
+      const remainingAlunos = alunos.filter(a => a.turma !== adminTurmaFiltro);
+      store.saveConfig({ alunosList: remainingAlunos });
+      setAdminTurmaFiltro('');
+      setSelectedAdminAlunos([]);
+      refreshData();
+      notify(`Turma ${adminTurmaFiltro} removida com sucesso!`);
+    }
   };
 
   const transferStudent = () => {
@@ -80,13 +95,11 @@ const AdminTab: React.FC<AdminTabProps> = ({ alunos, config, turmasExistentes, n
       });
 
       if (newAlunos.length) {
-        // Se estiver em modo restauração, ignora a lista atual (alunos) e salva só a nova
         const finalAlunosList = isRestoreMode ? newAlunos : [...alunos, ...newAlunos];
         store.saveConfig({ alunosList: finalAlunosList });
         refreshData();
         notify(isRestoreMode ? "Base de dados restaurada!" : `${newAlunos.length} alunos importados!`);
       }
-      
       if (fileInputRef.current) fileInputRef.current.value = '';
     };
     reader.readAsText(file);
@@ -132,29 +145,20 @@ const AdminTab: React.FC<AdminTabProps> = ({ alunos, config, turmasExistentes, n
       {/* CSV Import & Restore */}
       <div className="glass rounded-3xl p-6 shadow-lg space-y-4">
         <h3 className="font-black text-sm flex items-center gap-2 text-foreground"><FileUp size={18} className="text-primary" /> Gestão via CSV</h3>
-        <p className="text-xs text-muted-foreground">Formato: TURMA,NOME (Ex: 1A,NELTON COSTA)</p>
-        
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button 
-            onClick={() => { setIsRestoreMode(false); fileInputRef.current?.click(); }} 
-            className="w-full py-4 bg-secondary hover:bg-muted text-foreground rounded-2xl font-bold border border-border transition-colors text-sm flex items-center justify-center gap-2"
-          >
+          <button onClick={() => { setIsRestoreMode(false); fileInputRef.current?.click(); }} 
+            className="w-full py-4 bg-secondary hover:bg-muted text-foreground rounded-2xl font-bold border border-border transition-colors text-sm flex items-center justify-center gap-2">
             <FileUp size={16} /> Importar Dados
           </button>
-          
-          <button 
-            onClick={() => {
-              if(confirm("CUIDADO: Isso apagará todos os alunos atuais para colocar os do arquivo. Confirmar restauração?")) {
+          <button onClick={() => {
+              if(confirm("CUIDADO: Isso apagará todos os alunos atuais. Confirmar restauração?")) {
                 setIsRestoreMode(true);
                 fileInputRef.current?.click();
               }
-            }} 
-            className="w-full py-4 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-2xl font-bold border border-destructive/20 transition-colors text-sm flex items-center justify-center gap-2"
-          >
+            }} className="w-full py-4 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-2xl font-bold border border-destructive/20 transition-colors text-sm flex items-center justify-center gap-2">
             <RotateCcw size={16} /> Restaurar Base
           </button>
         </div>
-        
         <input type="file" accept=".csv" ref={fileInputRef} onChange={handleCsvUpload} className="hidden" />
       </div>
 
@@ -190,11 +194,24 @@ const AdminTab: React.FC<AdminTabProps> = ({ alunos, config, turmasExistentes, n
       {/* Delete Students */}
       <div className="glass rounded-3xl p-6 shadow-lg space-y-5 border-destructive/10">
         <h3 className="font-black text-sm text-destructive flex items-center gap-2"><Trash2 size={18} /> Limpeza de Registos</h3>
-        <select className="w-full p-4 bg-secondary rounded-2xl border border-border outline-none font-semibold text-foreground appearance-none"
-          value={adminTurmaFiltro} onChange={e => { setAdminTurmaFiltro(e.target.value); setSelectedAdminAlunos([]); }}>
-          <option value="">Filtrar Turma...</option>
-          {turmasExistentes.map(t => <option key={t}>{t}</option>)}
-        </select>
+        <div className="flex gap-2">
+          <select className="flex-1 p-4 bg-secondary rounded-2xl border border-border outline-none font-semibold text-foreground appearance-none"
+            value={adminTurmaFiltro} onChange={e => { setAdminTurmaFiltro(e.target.value); setSelectedAdminAlunos([]); }}>
+            <option value="">Filtrar Turma...</option>
+            {turmasExistentes.map(t => <option key={t}>{t}</option>)}
+          </select>
+          {/* BOTÃO PARA APAGAR TURMA COMPLETA */}
+          {adminTurmaFiltro && (
+            <button 
+              onClick={deleteEntireTurma}
+              className="px-4 bg-destructive text-destructive-foreground rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center"
+              title={`Apagar toda a turma ${adminTurmaFiltro}`}
+            >
+              <Trash2 size={20} />
+            </button>
+          )}
+        </div>
+        
         {adminTurmaFiltro && (
           <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto no-scrollbar">
             {alunos.filter(a => a.turma === adminTurmaFiltro).map(a => (
@@ -208,12 +225,12 @@ const AdminTab: React.FC<AdminTabProps> = ({ alunos, config, turmasExistentes, n
         )}
         {selectedAdminAlunos.length > 0 && (
           <button onClick={() => setDeleteModal(true)} className="w-full py-4 bg-destructive text-destructive-foreground rounded-2xl font-bold shadow-lg active:scale-[0.98] transition-all text-sm">
-            Apagar {selectedAdminAlunos.length} Aluno(s)
+            Apagar {selectedAdminAlunos.length} Aluno(s) Selecionado(s)
           </button>
         )}
       </div>
 
-      {/* Settings */}
+      {/* Settings, Auto Blocks & Passwords permanecem iguais */}
       <div className="glass rounded-3xl p-6 shadow-lg space-y-5">
         <h3 className="font-black text-sm flex items-center gap-2 text-foreground"><Clock size={18} className="text-primary" /> Limite de Saída</h3>
         <div className="flex items-center gap-3">
@@ -225,7 +242,6 @@ const AdminTab: React.FC<AdminTabProps> = ({ alunos, config, turmasExistentes, n
         </div>
       </div>
 
-      {/* Auto Blocks */}
       <div className="glass rounded-3xl p-6 shadow-lg space-y-5">
         <h3 className="font-black text-sm flex items-center gap-2 text-foreground"><Lock size={18} className="text-destructive" /> Bloqueios Automáticos</h3>
         {config.autoBlocks.map((block, idx) => (
@@ -255,7 +271,6 @@ const AdminTab: React.FC<AdminTabProps> = ({ alunos, config, turmasExistentes, n
         </button>
       </div>
 
-      {/* Passwords */}
       <div className="glass rounded-3xl p-6 shadow-lg space-y-5">
         <h3 className="font-black text-sm flex items-center gap-2 text-foreground"><KeyRound size={18} className="text-warning" /> PINs de Acesso</h3>
         {(['admin', 'professor', 'apoio'] as const).map(role => (
