@@ -30,7 +30,7 @@ interface TabNavProps {
   libraryCount: number;
 }
 
-const tabs = [
+const tabs: { id: string; label: string; icon: typeof Clock; hideFor?: string[]; badge?: string }[] = [
   { id: 'saidas', label: 'Saídas', icon: Clock },
   { id: 'ocorrencias', label: 'Ocorrências', icon: AlertCircle, hideFor: ['aluno'] },
   { id: 'historico', label: 'Histórico', icon: History, hideFor: ['aluno'] },
@@ -40,7 +40,7 @@ const tabs = [
   { id: 'pesquisa', label: 'Pesquisa', icon: Search, hideFor: ['aluno'] },
   { id: 'acompanhamento', label: 'Análise', icon: BarChart3, hideFor: ['professor', 'aluno'] },
   { id: 'admin', label: 'Config', icon: Settings, hideFor: ['professor', 'aluno'] },
-] as const;
+];
 
 export const TabNav: React.FC<TabNavProps> = ({ activeTab, setActiveTab, userRole, coordCount, libraryCount }) => {
   const badges: Record<string, number> = { coordCount, libraryCount };
