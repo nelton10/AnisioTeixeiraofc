@@ -21,7 +21,7 @@ export interface HistoryRecord {
   alunoId: string;
   alunoNome: string;
   turma: string;
-  categoria: 'saida' | 'ocorrencia' | 'merito' | 'atraso' | 'coordenação' | 'medida';
+  categoria: 'saida' | 'ocorrencia' | 'merito' | 'atraso' | 'coordenação' | 'medida' | 'avaliacao_aula';
   detalhe: string;
   timestamp: string;
   rawTimestamp: number;

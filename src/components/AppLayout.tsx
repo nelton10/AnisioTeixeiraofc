@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, Clock, AlertCircle, History, DoorOpen, GraduationCap, Library, Search, BarChart3, Settings } from 'lucide-react';
+import { LogOut, Clock, AlertCircle, History, DoorOpen, GraduationCap, Library, Search, BarChart3, Settings, Star } from 'lucide-react';
 import EscolaLogo from './EscolaLogo';
 import { UserRole } from '@/types';
 
@@ -38,6 +38,7 @@ const tabs: { id: string; label: string; icon: typeof Clock; hideFor?: string[];
   { id: 'coord', label: 'Coord.', icon: GraduationCap, hideFor: ['aluno'], badge: 'coordCount' },
   { id: 'medidas', label: 'Biblioteca', icon: Library, hideFor: ['aluno'], badge: 'libraryCount' },
   { id: 'pesquisa', label: 'Pesquisa', icon: Search, hideFor: ['aluno'] },
+  { id: 'avaliar_aula', label: 'Avaliar Aula', icon: Star, hideFor: ['aluno'] },
   { id: 'acompanhamento', label: 'Análise', icon: BarChart3, hideFor: ['professor', 'aluno'] },
   { id: 'alunos', label: 'Alunos', icon: GraduationCap, hideFor: ['professor', 'aluno'] },
   { id: 'admin', label: 'Config', icon: Settings, hideFor: ['professor', 'aluno'] },

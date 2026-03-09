@@ -11,6 +11,8 @@ interface BibliotecaTabProps {
 }
 
 const BibliotecaTab: React.FC<BibliotecaTabProps> = ({ libraryQueue, username, notify, refreshData }) => {
+  const [observacoes, setObservacoes] = React.useState<Record<string, string>>({});
+
   const handleAction = async (item: LibraryItem, actionType: string) => {
     const now = new Date(); const ts = now.toLocaleString('pt-PT'); const raw = now.getTime();
     if (actionType === 'nao_apareceu') {
@@ -30,11 +32,15 @@ const BibliotecaTab: React.FC<BibliotecaTabProps> = ({ libraryQueue, username, n
         timestamp: ts, rawTimestamp: raw, professor: username
       });
     }
+    const obsTxt = observacoes[item.id]?.trim();
+    const resultText = `BIBLIOTECA: Resultado ${actionType.toUpperCase()}${obsTxt ? ` - Obs: ${obsTxt}` : ''}`;
     await store.addHistoryRecord({
       id: store.generateId(), alunoId: item.alunoId, alunoNome: item.alunoNome, turma: item.turma,
-      categoria: 'medida', detalhe: `BIBLIOTECA: Resultado ${actionType.toUpperCase()}`,
+      categoria: 'medida', detalhe: resultText,
       timestamp: ts, rawTimestamp: raw + 10, professor: username
     });
+
+    setObservacoes(prev => { const next = { ...prev }; delete next[item.id]; return next; });
     await store.removeLibraryItem(item.id);
     await refreshData(); notify("Avaliação concluída!");
   };
@@ -55,9 +61,15 @@ const BibliotecaTab: React.FC<BibliotecaTabProps> = ({ libraryQueue, username, n
                 <p className="font-extrabold text-foreground text-base">{i.alunoNome}</p>
                 <span className="text-[10px] font-extrabold uppercase text-accent bg-accent/10 px-2 py-1 rounded-lg">{i.turma}</span>
               </div>
-              <div className="bg-secondary p-3.5 rounded-2xl border border-border mb-5">
+              <div className="bg-secondary p-3.5 rounded-2xl border border-border mb-3">
                 <p className="text-[11px] font-medium text-muted-foreground italic">"{i.obsCoord || "Sem observações da gestão."}"</p>
               </div>
+              <textarea
+                value={observacoes[i.id] || ''}
+                onChange={e => setObservacoes(prev => ({ ...prev, [i.id]: e.target.value }))}
+                placeholder="Observações de liberação (opcional)..."
+                className="w-full bg-secondary/50 border border-border rounded-xl p-3 text-xs outline-none text-foreground resize-none mb-4 min-h-[60px]"
+              />
               <div className="grid grid-cols-3 gap-2.5">
                 <button onClick={() => handleAction(i, 'nao_apareceu')}
                   className="flex flex-col items-center justify-center gap-1.5 py-3.5 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-xl border border-destructive/10 active:scale-95 transition-all">
