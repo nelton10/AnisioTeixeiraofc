@@ -22,28 +22,29 @@ async function handleResponse(promise: any, actionName: string) {
 
 // Config
 export async function getConfig(): Promise<AppConfig & { alunosList: Aluno[] }> {
+  const defaultConfig: AppConfig = {
+    autoBlocks: [],
+    exitLimitMinutes: 15,
+    passwords: { admin: 'gestao', professor: 'prof', apoio: 'apoio' },
+  };
+
   try {
     const configRow = await handleResponse(
       supabase.from('config').select('data').eq('id', 'app_config').single(),
       'getConfigRow'
     ).catch(() => null);
 
-    const AlunosData = await handleResponse(
-      supabase.from('alumnos').select('*').order('nome', { ascending: true }),
-      'getAlunos'
-    ).catch(() => []);
-
-    const defaultConfig: AppConfig = {
-      autoBlocks: [],
-      exitLimitMinutes: 15,
-      passwords: { admin: 'gestao', professor: 'prof', apoio: 'apoio' },
-    };
+    const alunosResponse = await supabase.from('alumnos').select('*').order('nome', { ascending: true });
+    if (alunosResponse.error) {
+      console.error('Supabase Error [getAlunos]:', alunosResponse.error.message, alunosResponse.error.details);
+    }
+    const AlunosData: Aluno[] = alunosResponse.data || [];
 
     const configData = configRow?.data || defaultConfig;
-    return { ...configData, alunosList: AlunosData || [] };
+    return { ...configData, alunosList: AlunosData };
   } catch (error) {
     console.error("Error in getConfig:", error);
-    return { autoBlocks: [], exitLimitMinutes: 15, passwords: { admin: 'gestao', professor: 'prof', apoio: 'apoio' }, alunosList: [] };
+    return { ...defaultConfig, alunosList: [] };
   }
 }
 

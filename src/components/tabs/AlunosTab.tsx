@@ -180,7 +180,24 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, notify,
 
             {/* Lista de Alunos */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredAlunos.map(a => (
+                {filteredAlunos.length === 0 ? (
+                    <div className="col-span-2 glass p-10 rounded-3xl text-center border-2 border-dashed border-border space-y-4">
+                        <div className="text-5xl">🎓</div>
+                        {alunos.length === 0 ? (
+                            <div className="space-y-2">
+                                <p className="font-black text-foreground text-lg">Nenhum aluno registado</p>
+                                <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                                    A base de dados pode estar vazia. Adicione alunos manualmente ou importe um CSV no formato <span className="font-mono bg-secondary px-1 rounded">nome,turma</span>.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                <p className="font-black text-foreground text-lg">Nenhum aluno coincide com o filtro</p>
+                                <p className="text-sm text-muted-foreground">Tente limpar o termo de busca ou mudar a turma selecionada.</p>
+                            </div>
+                        )}
+                    </div>
+                ) : filteredAlunos.map(a => (
                     <div key={a.id} className="glass group p-5 rounded-2xl border border-white/5 hover:border-primary/20 shadow-sm hover:shadow-md transition-all flex justify-between items-center">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center font-black text-primary text-lg">
