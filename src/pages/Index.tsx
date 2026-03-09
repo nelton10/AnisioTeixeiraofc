@@ -87,8 +87,8 @@ const Index = () => {
           <AnaliseTab records={state.records} turmasExistentes={state.turmasExistentes} statsSummary={state.statsSummary} />
         )}
         {state.activeTab === 'admin' && (
-          <AdminTab alunos={state.alunos} history={state.records}
-            notify={state.notify} refreshData={state.refreshData} />
+          <AdminTab alunos={state.alunos} history={state.records} config={state.config}
+            saveConfig={state.saveConfig} notify={state.notify} refreshData={state.refreshData} />
         )}
 
       </main>

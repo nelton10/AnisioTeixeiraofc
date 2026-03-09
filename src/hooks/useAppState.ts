@@ -134,6 +134,16 @@ export function useAppState() {
     ).length;
   }, [records]);
 
+  const saveConfig = useCallback(async (data: Partial<AppConfig>) => {
+    try {
+      await store.saveConfig(data);
+      await refreshData();
+      notify("Configurações guardadas!");
+    } catch (e) {
+      notify("Erro ao guardar configurações.");
+    }
+  }, [refreshData, notify]);
+
   const statsSummary = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -150,6 +160,6 @@ export function useAppState() {
     authState, alunos, activeExits, records, coordinationQueue, libraryQueue,
     suspensions, avisos, config, activeTab, showToast, currentTimeStr, isLoading,
     turmasExistentes, activeBlock, statsSummary,
-    setActiveTab, notify, login, logout, refreshData, getTodayExitsCount,
+    setActiveTab, notify, login, logout, refreshData, getTodayExitsCount, saveConfig,
   };
 }
