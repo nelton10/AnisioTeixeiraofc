@@ -119,11 +119,11 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, notify,
 
             notify("Processando ficheiro...");
 
-            // Assume header: nome,turma
+            // Formato esperado: turma,nome
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
-                const [nome, turma] = line.split(',').map(s => s.trim());
+                const [turma, nome] = line.split(',').map(s => s.trim());
                 if (nome && turma) {
                     newAlunos.push({ nome, turma });
                 }
