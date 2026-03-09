@@ -89,6 +89,24 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, notify,
         document.body.removeChild(link);
     };
 
+    const handleDeleteAll = async () => {
+        if (alunos.length === 0) return notify("Não há alunos para apagar.");
+        if (!confirm(`⚠️ ATENÇÃO: Esta ação irá apagar TODOS os ${alunos.length} alunos. Um backup CSV será feito automaticamente antes. Deseja continuar?`)) return;
+
+        // 1. Fazer backup automático primeiro
+        handleExportCSV();
+
+        // 2. Apagar todos
+        try {
+            notify("A apagar todos os alunos...");
+            await store.deleteAlunos(alunos.map(a => a.id));
+            await refreshData();
+            notify(`✅ ${alunos.length} alunos apagados. Backup foi descarregado.`);
+        } catch (err) {
+            notify("❌ Erro ao apagar alunos. Tente novamente.");
+        }
+    };
+
     const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -147,6 +165,9 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, notify,
                         </button>
                         <button onClick={() => fileInputRef.current?.click()} className="p-3 bg-secondary hover:bg-muted text-foreground rounded-xl transition-all shadow-sm active:scale-95" title="Importar CSV">
                             <Upload size={20} />
+                        </button>
+                        <button onClick={handleDeleteAll} className="p-3 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-xl transition-all shadow-sm active:scale-95" title="Apagar todos os alunos (faz backup automático)">
+                            <Trash2 size={20} />
                         </button>
                         <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground rounded-xl font-black text-xs shadow-md active:scale-95 transition-all">
                             <UserPlus size={18} /> NOVO ALUNO
