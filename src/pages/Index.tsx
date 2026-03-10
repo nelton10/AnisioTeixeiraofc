@@ -75,7 +75,7 @@ const Index = () => {
                 notify={state.notify} refreshData={state.refreshData} />
             )}
             {state.activeTab === 'historico' && (
-              <HistoricoTab records={state.records} turmasExistentes={state.turmasExistentes}
+              <HistoricoTab records={state.records} libraryQueue={state.libraryQueue} turmasExistentes={state.turmasExistentes}
                 userRole={state.authState.role} notify={state.notify} refreshData={state.refreshData} />
             )}
             {state.activeTab === 'atrasos' && (
@@ -104,6 +104,7 @@ const Index = () => {
             )}
             {state.activeTab === 'alunos' && (
               <AlunosTab alunos={state.alunos} turmasExistentes={state.turmasExistentes}
+                records={state.records} libraryQueue={state.libraryQueue}
                 notify={state.notify} refreshData={state.refreshData} />
             )}
             {state.activeTab === 'admin' && (

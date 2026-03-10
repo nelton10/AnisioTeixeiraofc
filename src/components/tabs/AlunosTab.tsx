@@ -10,23 +10,28 @@ import {
     X,
     Check,
     ArrowRightLeft,
-    FileSpreadsheet
+    FileSpreadsheet,
+    User
 } from 'lucide-react';
 import * as store from '@/lib/store';
-import { Aluno } from '@/types';
+import { HistoryRecord, LibraryItem, Aluno } from '@/types';
+import { StudentProfileModal } from '@/components/modals/StudentProfileModal';
 
 interface AlunosTabProps {
     alunos: Aluno[];
     turmasExistentes: string[];
+    records: HistoryRecord[];
+    libraryQueue: LibraryItem[];
     notify: (msg: string) => void;
     refreshData: () => Promise<void>;
 }
 
-const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, notify, refreshData }) => {
+const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records, libraryQueue, notify, refreshData }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedTurma, setSelectedTurma] = useState('Todas');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingAluno, setEditingAluno] = useState<Aluno | null>(null);
+    const [viewingAluno, setViewingAluno] = useState<Aluno | null>(null);
 
     const [formData, setFormData] = useState({ nome: '', turma: '' });
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -231,19 +236,33 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, notify,
                                 </div>
                             </div>
                         </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-2">
                             <button
-                                onClick={() => setEditingAluno(a)}
-                                className="p-2.5 text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-lg transition-all"
+                                onClick={() => setViewingAluno(a)}
+                                className="px-3 py-1.5 bg-secondary/80 text-foreground hover:bg-primary hover:text-primary-foreground font-black text-[10px] uppercase rounded-lg transition-all opacity-0 group-hover:opacity-100 hidden sm:block"
                             >
-                                <Edit2 size={16} />
+                                Perfil 360
                             </button>
-                            <button
-                                onClick={() => handleDelete(a.id, a.nome)}
-                                className="p-2.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition-all"
-                            >
-                                <Trash2 size={16} />
-                            </button>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                    onClick={() => setViewingAluno(a)}
+                                    className="sm:hidden p-2.5 text-primary hover:bg-primary/20 hover:text-primary rounded-lg transition-all"
+                                >
+                                    <User size={16} />
+                                </button>
+                                <button
+                                    onClick={() => setEditingAluno(a)}
+                                    className="p-2.5 text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-lg transition-all"
+                                >
+                                    <Edit2 size={16} />
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(a.id, a.nome)}
+                                    className="p-2.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition-all"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ))}
@@ -322,6 +341,16 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, notify,
                         </button>
                     </form>
                 </div>
+            )}
+
+            {/* Modal Perfil 360 */}
+            {viewingAluno && (
+                <StudentProfileModal
+                    aluno={viewingAluno}
+                    records={records}
+                    libraryQueue={libraryQueue}
+                    onClose={() => setViewingAluno(null)}
+                />
             )}
         </div>
     );

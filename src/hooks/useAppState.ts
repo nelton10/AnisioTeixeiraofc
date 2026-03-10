@@ -5,6 +5,24 @@ import {
   Suspension, Aviso, AppConfig, UserRole, AuthState
 } from '@/types';
 import * as store from '@/lib/store';
+import { toast } from 'sonner';
+
+const playDing = () => {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'bell' as any || 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch (e) { }
+};
 
 export function useAppState() {
   const [authState, setAuthState] = useState<AuthState>({ isAuthenticated: false, username: '', role: 'professor' });
@@ -35,7 +53,6 @@ export function useAppState() {
           passwords: { ...{ admin: 'gestao', professor: 'prof', apoio: 'apoio', parent: 'pais' }, ...(cfg.passwords || {}) }
         });
       }
-
 
       const [exits, hist, coord, lib, susp, avs] = await Promise.all([
         store.getActiveExits(),
@@ -73,6 +90,26 @@ export function useAppState() {
 
     const channel = supabase
       .channel('schema-db-changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'history' }, (payload) => {
+        refreshData();
+        const row = payload.new as HistoryRecord;
+        if (row.categoria === 'ocorrencia' || row.categoria === 'atraso' || row.categoria === 'merito' || row.categoria === 'coordenação') {
+          playDing();
+          toast(`Novo registro: ${row.categoria.toUpperCase()}`, {
+            description: `${row.alunoNome || 'Aluno'} - ${row.detalhe}`,
+            duration: 5000,
+          });
+        }
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'avisos' }, (payload) => {
+        refreshData();
+        const row = payload.new as Aviso;
+        playDing();
+        toast('📣 NOVO AVISO DA GESTÃO', {
+          description: row.texto,
+          duration: 8000,
+        });
+      })
       .on('postgres_changes', { event: '*', schema: 'public' }, () => {
         refreshData();
       })
