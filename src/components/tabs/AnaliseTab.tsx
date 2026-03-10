@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Activity, UserX, BarChart3, FileSpreadsheet, Download, DatabaseBackup, PieChart as PieChartIcon, TrendingUp } from 'lucide-react';
+import { Search, Activity, UserX, BarChart3, FileSpreadsheet, Download, DatabaseBackup, PieChart as PieChartIcon, TrendingUp, Trophy, Medal } from 'lucide-react';
 import { HistoryRecord } from '@/types';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -78,12 +78,28 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
     const topInfr = Object.entries(infratores).map(([nome, count]) => ({ nome, count })).sort((a, b) => b.count - a.count).slice(0, 10);
     const turmaArr = Object.entries(turmaStats).map(([turma, count]) => ({ turma, count, fill: 'hsl(var(--primary))' })).sort((a, b) => b.count - a.count).slice(0, 5);
 
+    // Gamification: Ranking das Turmas
+    const classScores: Record<string, number> = {};
+    filteredHistory.forEach(r => {
+      if (!r.turma) return;
+      if (!classScores[r.turma]) classScores[r.turma] = 0;
+
+      if (r.categoria === 'merito') classScores[r.turma] += 5;       // +5 pontos por mérito
+      else if (r.categoria === 'ocorrencia') classScores[r.turma] -= 3; // -3 por ocorrência (indisciplina)
+      else if (r.categoria === 'atraso') classScores[r.turma] -= 1;     // -1 por atraso
+    });
+
+    const rankingData = Object.entries(classScores)
+      .map(([turma, score]) => ({ turma, score }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5); // Top 5
+
     // Sort line data by date string parsing (rough sorting)
     const trendData = Object.entries(lineDataMap)
       .map(([date, counts]) => ({ date, ...counts }))
       .slice(-7); // Last 7 days with data
 
-    return { occArr, maxOcc: occArr[0]?.count || 1, topInfr, turmaArr, trendData };
+    return { occArr, maxOcc: occArr[0]?.count || 1, topInfr, turmaArr, trendData, rankingData };
   }, [filteredHistory]);
 
   const downloadReport = () => {
@@ -233,17 +249,46 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
         </div>
       </div>
 
-      {/* Top Infratores */}
-      <div className="bg-destructive/5 rounded-3xl border border-destructive/10 shadow-md p-6">
-        <h3 className="text-sm font-black text-destructive mb-5 flex items-center gap-2"><UserX size={18} /> Top 10 Infratores</h3>
-        <div className="grid grid-cols-2 gap-3">
-          {dashboard.topInfr.length === 0 ? <p className="text-xs text-destructive/60 col-span-2">Ninguém registado.</p> :
-            dashboard.topInfr.map((a, i) => (
-              <div key={i} className="flex justify-between items-center bg-card p-3 rounded-2xl border border-destructive/10 shadow-sm">
-                <span className="text-xs font-bold text-foreground truncate pr-2"><span className="text-destructive font-black mr-1">{i + 1}º</span> {a.nome}</span>
-                <span className="text-[9px] bg-destructive/10 text-destructive font-extrabold px-2 py-1 rounded-lg shrink-0">{a.count}</span>
-              </div>
-            ))}
+      {/* Side-by-Side: Infratores vs Ranking Gamificado */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Top Infratores */}
+        <div className="bg-destructive/5 rounded-3xl border border-destructive/10 shadow-md p-6 h-full">
+          <h3 className="text-sm font-black text-destructive mb-5 flex items-center gap-2"><UserX size={18} /> Top Infratores</h3>
+          <div className="space-y-3">
+            {dashboard.topInfr.length === 0 ? <p className="text-xs text-destructive/60">Ninguém registado.</p> :
+              dashboard.topInfr.map((a, i) => (
+                <div key={i} className="flex justify-between items-center bg-card p-3 rounded-2xl border border-destructive/10 shadow-sm">
+                  <span className="text-xs font-bold text-foreground truncate pr-2"><span className="text-destructive font-black mr-1">{i + 1}º</span> {a.nome}</span>
+                  <span className="text-[9px] bg-destructive/10 text-destructive font-extrabold px-2 py-1 rounded-lg shrink-0">{a.count}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        {/* Gamification: Ranking Turmas */}
+        <div className="bg-accent/5 rounded-3xl border border-accent/20 shadow-md p-6 relative overflow-hidden h-full">
+          <div className="absolute -top-4 -right-4 text-accent/10"><Trophy size={100} /></div>
+          <h3 className="text-sm font-black text-accent mb-2 flex items-center gap-2 relative z-10"><Medal size={18} /> Ranking de Turmas</h3>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-5 relative z-10">Conhece a Turma do Mês</p>
+
+          <div className="space-y-3 relative z-10">
+            {dashboard.rankingData.length === 0 ? <p className="text-xs text-accent/60">Sem dados suficientes.</p> :
+              dashboard.rankingData.map((a, i) => (
+                <div key={i} className={`flex justify-between items-center p-3 rounded-2xl border shadow-sm transition-all ${i === 0 ? 'bg-accent text-accent-foreground border-accent scale-105 shadow-accent/30 my-4 py-4' : 'bg-card border-accent/10 border text-foreground'
+                  }`}>
+                  <span className={`text-xs font-bold truncate pr-2 flex items-center gap-2 ${i === 0 ? 'text-sm font-black' : ''}`}>
+                    <span className="font-black opacity-70">{i + 1}º</span>
+                    {i === 0 && <Trophy size={16} className="text-yellow-300 fill-yellow-300" />} {a.turma}
+                  </span>
+                  <div className="text-right">
+                    <span className={`text-xs font-black ${i === 0 ? 'text-background' : (a.score >= 0 ? 'text-accent' : 'text-destructive')}`}>
+                      {a.score > 0 ? `+${a.score}` : a.score}
+                    </span>
+                    <span className="text-[9px] ml-1 opacity-70 uppercase tracking-widest">PTS</span>
+                  </div>
+                </div>
+              ))}
+          </div>
         </div>
       </div>
 

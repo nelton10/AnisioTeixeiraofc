@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, FileSpreadsheet, Download, Clock, AlertCircle, Gavel, Star } from 'lucide-react';
+import { Search, FileSpreadsheet, Download, Clock, AlertCircle, Gavel, Star, FileDown } from 'lucide-react';
 import { Aluno, HistoryRecord } from '@/types';
 
 interface PesquisaTabProps {
@@ -80,11 +80,78 @@ const PesquisaTab: React.FC<PesquisaTabProps> = ({ alunos, records, turmasExiste
     link.click();
   };
 
+  const downloadFilteredReport = () => {
+    if (filtered.length === 0) return;
+
+    // Se estiver a ver 1 aluno, usar a opção detalhada
+    if (singleStudent) {
+      downloadStudentReport(filtered[0]);
+      return;
+    }
+
+    // Exportação Global/Turma
+    const relatorioNome = selectedTurma ? `Relatorio_Turma_${selectedTurma}` : `Relatorio_Geral_Pesquisa`;
+
+    // Aggregar dados totais para o sumário
+    const stats = {
+      alunos: filtered.length,
+      saidas: filtered.reduce((acc, s) => acc + s.saidas, 0),
+      ocorrencias: filtered.reduce((acc, s) => acc + s.ocorrencias, 0),
+      suspensoes: filtered.reduce((acc, s) => acc + s.suspensoes, 0),
+      meritos: filtered.reduce((acc, s) => acc + s.meritos, 0)
+    };
+
+    let xml = `<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="h"><Font ss:Bold="1"/></Style></Styles>`;
+
+    // 1. Aba Resumo
+    xml += `<Worksheet ss:Name="RESUMO DA CLASSE"><Table><Row ss:StyleID="h"><Cell><Data ss:Type="String">MÉTRICA</Data></Cell><Cell><Data ss:Type="String">TOTAL</Data></Cell></Row>`;
+    xml += `<Row><Cell><Data ss:Type="String">Filtro Ativo</Data></Cell><Cell><Data ss:Type="String">${selectedTurma || 'Todas as Turmas'} ${filtroBuscaNome ? `(Busca: ${filtroBuscaNome})` : ''}</Data></Cell></Row>`;
+    xml += `<Row><Cell><Data ss:Type="String">Alunos Listados</Data></Cell><Cell><Data ss:Type="Number">${stats.alunos}</Data></Cell></Row>`;
+    xml += `<Row><Cell><Data ss:Type="String">Total de Ocorrências</Data></Cell><Cell><Data ss:Type="Number">${stats.ocorrencias}</Data></Cell></Row>`;
+    xml += `<Row><Cell><Data ss:Type="String">Total de Suspensões</Data></Cell><Cell><Data ss:Type="Number">${stats.suspensoes}</Data></Cell></Row>`;
+    xml += `<Row><Cell><Data ss:Type="String">Total de Méritos</Data></Cell><Cell><Data ss:Type="Number">${stats.meritos}</Data></Cell></Row>`;
+    xml += `<Row><Cell><Data ss:Type="String">Total de Saídas</Data></Cell><Cell><Data ss:Type="Number">${stats.saidas}</Data></Cell></Row>`;
+    xml += `</Table></Worksheet>`;
+
+    // 2. Aba Lista de Alunos (Comparativo)
+    xml += `<Worksheet ss:Name="LISTA ALUNOS"><Table><Row ss:StyleID="h"><Cell><Data ss:Type="String">ALUNO</Data></Cell><Cell><Data ss:Type="String">TURMA</Data></Cell><Cell><Data ss:Type="String">OCORRÊNCIAS</Data></Cell><Cell><Data ss:Type="String">SUSPENSÕES</Data></Cell><Cell><Data ss:Type="String">SAÍDAS</Data></Cell><Cell><Data ss:Type="String">MÉRITOS</Data></Cell></Row>`;
+    filtered.forEach(s => {
+      xml += `<Row><Cell><Data ss:Type="String">${s.nome}</Data></Cell><Cell><Data ss:Type="String">${s.turma}</Data></Cell><Cell><Data ss:Type="Number">${s.ocorrencias}</Data></Cell><Cell><Data ss:Type="Number">${s.suspensoes}</Data></Cell><Cell><Data ss:Type="Number">${s.saidas}</Data></Cell><Cell><Data ss:Type="Number">${s.meritos}</Data></Cell></Row>`;
+    });
+    xml += `</Table></Worksheet>`;
+
+    // 3. Aba Histórico Detalhado
+    xml += `<Worksheet ss:Name="HISTÓRICO DETALHADO"><Table><Row ss:StyleID="h"><Cell><Data ss:Type="String">DATA</Data></Cell><Cell><Data ss:Type="String">ALUNO</Data></Cell><Cell><Data ss:Type="String">TURMA</Data></Cell><Cell><Data ss:Type="String">CATEGORIA</Data></Cell><Cell><Data ss:Type="String">DETALHE</Data></Cell><Cell><Data ss:Type="String">PROF/AUTOR</Data></Cell></Row>`;
+
+    // Obter histórico apenas dos alunos filtrados:
+    const filteredIds = new Set(filtered.map(s => s.id));
+    const detailedHistory = records.filter(r => filteredIds.has(r.alunoId)).sort((a, b) => b.rawTimestamp - a.rawTimestamp);
+
+    detailedHistory.forEach(r => {
+      xml += `<Row><Cell><Data ss:Type="String">${r.timestamp}</Data></Cell><Cell><Data ss:Type="String">${r.alunoNome || ''}</Data></Cell><Cell><Data ss:Type="String">${r.turma || ''}</Data></Cell><Cell><Data ss:Type="String">${r.categoria.toUpperCase()}</Data></Cell><Cell><Data ss:Type="String">${r.detalhe}</Data></Cell><Cell><Data ss:Type="String">${r.professor}</Data></Cell></Row>`;
+    });
+    xml += `</Table></Worksheet></Workbook>`;
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([xml], { type: 'application/vnd.ms-excel' }));
+    link.download = `${relatorioNome}.xls`;
+    link.click();
+  };
+
   return (
     <div className="space-y-6 pb-10 animate-fade-in">
       <div className="glass rounded-3xl shadow-lg overflow-hidden">
         <div className="bg-secondary/50 p-6 border-b border-border space-y-5">
-          <h3 className="font-black text-sm text-foreground flex items-center gap-2"><Search size={18} className="text-primary" /> Diretório de Alunos</h3>
+          <div className="flex justify-between items-center">
+            <h3 className="font-black text-sm text-foreground flex items-center gap-2"><Search size={18} className="text-primary" /> Diretório de Alunos</h3>
+            <button
+              onClick={downloadFilteredReport}
+              disabled={filtered.length === 0}
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-xs font-black shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FileDown size={16} /> EXPORTAR VISTA ATUAL
+            </button>
+          </div>
           <div className="relative group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
             <input type="text" placeholder="Pesquisar por nome..." value={filtroBuscaNome} onChange={e => setFiltroBuscaNome(e.target.value)}
