@@ -154,16 +154,29 @@ export async function saveConfig(data: Partial<AppConfig>) {
 // Alunos
 export async function addAluno(aluno: Omit<Aluno, 'id'> & { id?: string }) {
   const id = aluno.id || generateId();
+  const dbAluno = {
+    id,
+    nome: aluno.nome,
+    turma: aluno.turma,
+    responsavel_nome: aluno.responsavel_nome,
+    responsavel_telefone: aluno.responsavel_telefone,
+    responsavel_email: aluno.responsavel_email
+  };
   await executeMutation(
-    { table: 'alumnos', action: 'insert', payload: [{ ...aluno, id }] },
-    () => handleResponse(supabase.from('alumnos').insert([{ ...aluno, id }]), 'addAluno')
+    { table: 'alumnos', action: 'insert', payload: [dbAluno] },
+    () => handleResponse(supabase.from('alumnos').insert([dbAluno]), 'addAluno')
   );
 }
 
 export async function updateAluno(id: string, data: Partial<Aluno>) {
+  const dbData: any = { ...data };
+  if (data.responsavel_nome !== undefined) dbData.responsavel_nome = data.responsavel_nome;
+  if (data.responsavel_telefone !== undefined) dbData.responsavel_telefone = data.responsavel_telefone;
+  if (data.responsavel_email !== undefined) dbData.responsavel_email = data.responsavel_email;
+
   await executeMutation(
-    { table: 'alumnos', action: 'update', payload: data, matchField: 'id', matchValue: id },
-    () => handleResponse(supabase.from('alumnos').update(data).eq('id', id), 'updateAluno')
+    { table: 'alumnos', action: 'update', payload: dbData, matchField: 'id', matchValue: id },
+    () => handleResponse(supabase.from('alumnos').update(dbData).eq('id', id), 'updateAluno')
   );
 }
 

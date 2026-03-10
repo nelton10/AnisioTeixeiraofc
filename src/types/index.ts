@@ -2,6 +2,9 @@ export interface Aluno {
   id: string;
   nome: string;
   turma: string;
+  responsavel_nome?: string;
+  responsavel_telefone?: string;
+  responsavel_email?: string;
 }
 
 export interface ActiveExit {

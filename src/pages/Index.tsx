@@ -57,6 +57,9 @@ const Index = () => {
             studentName={state.authState.linkedStudentName}
             records={state.records}
             libraryQueue={state.libraryQueue}
+            avisos={state.avisos}
+            alunosList={state.alunos}
+            refreshData={state.refreshData}
           />
         ) : (
           <>
@@ -84,6 +87,7 @@ const Index = () => {
             )}
             {state.activeTab === 'coord' && (
               <CoordTab coordinationQueue={state.coordinationQueue} suspensions={state.suspensions}
+                avisos={state.avisos} records={state.records} alunos={state.alunos}
                 userRole={state.authState.role} username={state.authState.username}
                 notify={state.notify} refreshData={state.refreshData} />
             )}

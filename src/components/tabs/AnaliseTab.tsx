@@ -99,7 +99,31 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
       .map(([date, counts]) => ({ date, ...counts }))
       .slice(-7); // Last 7 days with data
 
-    return { occArr, maxOcc: occArr[0]?.count || 1, topInfr, turmaArr, trendData, rankingData };
+    // Heatmap Data (Day x Period)
+    const heatmapMatrix = [
+      { day: 'Seg', manha: 0, tarde: 0, noite: 0 },
+      { day: 'Ter', manha: 0, tarde: 0, noite: 0 },
+      { day: 'Qua', manha: 0, tarde: 0, noite: 0 },
+      { day: 'Qui', manha: 0, tarde: 0, noite: 0 },
+      { day: 'Sex', manha: 0, tarde: 0, noite: 0 },
+    ];
+
+    let maxHeat = 0;
+    filteredHistory.forEach(r => {
+      if (!r.rawTimestamp || (r.categoria !== 'ocorrencia' && r.categoria !== 'atraso')) return;
+      const d = new Date(r.rawTimestamp);
+      const dayOfWeek = d.getDay(); // 0=Sun, 1=Mon... 6=Sat
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        const hour = d.getHours();
+        const period = hour < 12 ? 'manha' : hour < 18 ? 'tarde' : 'noite';
+        heatmapMatrix[dayOfWeek - 1][period]++;
+        if (heatmapMatrix[dayOfWeek - 1][period] > maxHeat) {
+          maxHeat = heatmapMatrix[dayOfWeek - 1][period];
+        }
+      }
+    });
+
+    return { occArr, maxOcc: occArr[0]?.count || 1, topInfr, turmaArr, trendData, rankingData, heatmapMatrix, maxHeat };
   }, [filteredHistory]);
 
   const downloadReport = () => {
@@ -230,22 +254,59 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
       </div>
 
       {/* Behavior Chart (Top Turmas replaced with Recharts BarChart) */}
-      <div className="glass rounded-3xl p-6 shadow-lg h-80 flex flex-col">
-        <h3 className="text-sm font-black text-foreground mb-6 flex items-center gap-2">
-          <BarChart3 size={18} className="text-primary" /> Ocorrências por Turma (Top 5)
-        </h3>
-        <div className="flex-1 w-full relative">
-          {dashboard.turmaArr.length === 0 ? <p className="text-xs text-muted-foreground m-auto absolute inset-0 flex items-center justify-center">Sem dados.</p> : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dashboard.turmaArr} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis dataKey="turma" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--secondary))' }} />
-                <Bar dataKey="count" name="Ocorrências" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="glass rounded-3xl p-6 shadow-lg h-80 flex flex-col">
+          <h3 className="text-sm font-black text-foreground mb-6 flex items-center gap-2">
+            <BarChart3 size={18} className="text-primary" /> Ocorrências por Turma (Top 5)
+          </h3>
+          <div className="flex-1 w-full relative">
+            {dashboard.turmaArr.length === 0 ? <p className="text-xs text-muted-foreground m-auto absolute inset-0 flex items-center justify-center">Sem dados.</p> : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dashboard.turmaArr} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis dataKey="turma" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                  <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--secondary))' }} />
+                  <Bar dataKey="count" name="Ocorrências" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* Heatmap (Dias x Períodos) */}
+        <div className="glass rounded-3xl p-6 shadow-lg h-80 flex flex-col">
+          <h3 className="text-sm font-black text-foreground mb-6 flex items-center gap-2">
+            <Activity size={18} className="text-destructive" /> Mapa de Calor (Incidentes)
+          </h3>
+          <div className="flex-1 flex flex-col justify-center">
+            <div className="grid grid-cols-4 gap-2 text-center mb-2">
+              <div className="text-[10px] font-bold text-muted-foreground uppercase">Dia</div>
+              <div className="text-[10px] font-bold text-muted-foreground uppercase">Manhã</div>
+              <div className="text-[10px] font-bold text-muted-foreground uppercase">Tarde</div>
+              <div className="text-[10px] font-bold text-muted-foreground uppercase">Noite</div>
+            </div>
+            {dashboard.heatmapMatrix.map(row => (
+              <div key={row.day} className="grid grid-cols-4 gap-2 mb-2 items-center">
+                <div className="text-xs font-black text-foreground text-center">{row.day}</div>
+                {(['manha', 'tarde', 'noite'] as const).map(period => {
+                  const val = row[period];
+                  const intensity = dashboard.maxHeat > 0 ? val / dashboard.maxHeat : 0;
+                  const bgColor = intensity === 0 ? 'bg-secondary' : `bg-destructive`;
+
+                  return (
+                    <div key={period}
+                      className={`h-10 rounded-xl flex items-center justify-center transition-all ${bgColor}`}
+                      style={{ opacity: intensity === 0 ? 1 : Math.max(0.3, intensity) }}>
+                      <span className={`text-xs font-bold ${intensity > 0.5 ? 'text-white' : (intensity === 0 ? 'text-muted-foreground' : 'text-destructive-foreground')}`}>
+                        {val > 0 ? val : '-'}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

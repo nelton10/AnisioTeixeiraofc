@@ -1,24 +1,70 @@
-import React, { useState } from 'react';
-import { GraduationCap, ArrowRight, Library, Gavel, AlertOctagon, CheckCircle2, Camera, X } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { GraduationCap, ArrowRight, Library, Gavel, AlertOctagon, CheckCircle2, Camera, X, Bell, ShieldAlert, CalendarClock, Send } from 'lucide-react';
 import * as store from '@/lib/store';
-import { CoordinationItem, Suspension, UserRole } from '@/types';
+import { CoordinationItem, Suspension, UserRole, Aviso, HistoryRecord, Aluno } from '@/types';
 
 interface CoordTabProps {
   coordinationQueue: CoordinationItem[];
   suspensions: Suspension[];
+  avisos: Aviso[];
+  records: HistoryRecord[];
+  alunos: Aluno[];
   userRole: UserRole;
   username: string;
   notify: (msg: string) => void;
   refreshData: () => Promise<void>;
 }
 
-const CoordTab: React.FC<CoordTabProps> = ({ coordinationQueue, suspensions, username, notify, refreshData }) => {
+const CoordTab: React.FC<CoordTabProps> = ({ coordinationQueue, suspensions, avisos, records, alunos, username, notify, refreshData }) => {
   const [coordObs, setCoordObs] = useState('');
   const [suspensionModal, setSuspensionModal] = useState<CoordinationItem | null>(null);
   const [suspensionReturnDate, setSuspensionReturnDate] = useState('');
   const [endSuspensionModal, setEndSuspensionModal] = useState<Suspension | null>(null);
   const [endSuspensionObs, setEndSuspensionObs] = useState('');
   const [fotoViewer, setFotoViewer] = useState<string | null>(null);
+  const [novoAviso, setNovoAviso] = useState('');
+
+  // Early Warning System Logic
+  const warnings = useMemo(() => {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const recentRecords = records.filter(r => r.rawTimestamp >= oneWeekAgo.getTime());
+
+    const countMap: Record<string, { atrasos: number, ocorrencias: number, nome: string, turma: string }> = {};
+
+    recentRecords.forEach(r => {
+      if (r.categoria !== 'atraso' && r.categoria !== 'ocorrencia') return;
+      if (!countMap[r.alunoId]) {
+        countMap[r.alunoId] = { atrasos: 0, ocorrencias: 0, nome: r.alunoNome, turma: r.turma };
+      }
+      if (r.categoria === 'atraso') countMap[r.alunoId].atrasos++;
+      if (r.categoria === 'ocorrencia') countMap[r.alunoId].ocorrencias++;
+    });
+
+    const activeWarnings = Object.values(countMap).filter(c => c.atrasos >= 3 || c.ocorrencias >= 3);
+    return activeWarnings;
+  }, [records]);
+
+  const handlePostAviso = async () => {
+    if (!novoAviso.trim()) return;
+    const now = new Date();
+    await store.addAviso({
+      id: store.generateId(),
+      texto: novoAviso,
+      autor: username,
+      timestamp: now.toLocaleString('pt-PT'),
+      rawTimestamp: now.getTime()
+    });
+    setNovoAviso('');
+    await refreshData();
+    notify("Aviso postado com sucesso!");
+  };
+
+  const handleDeleteAviso = async (id: string) => {
+    await store.removeAviso(id);
+    await refreshData();
+    notify("Aviso removido!");
+  };
 
   const handleAction = async (item: CoordinationItem, type: string) => {
     const now = new Date(); const ts = now.toLocaleString('pt-PT'); const raw = now.getTime();
@@ -110,7 +156,7 @@ const CoordTab: React.FC<CoordTabProps> = ({ coordinationQueue, suspensions, use
         </div>
       )}
 
-      <div className="glass rounded-3xl p-6 shadow-lg relative overflow-hidden">
+      <div className="glass rounded-3xl p-6 shadow-lg relative overflow-hidden mb-6">
         <div className="absolute -top-10 -right-10 text-primary/5 pointer-events-none"><GraduationCap size={200} strokeWidth={1} /></div>
         <h3 className="font-black text-lg flex items-center gap-2 mb-6 text-foreground relative z-10">
           <div className="bg-primary/10 text-primary p-2.5 rounded-xl"><GraduationCap size={20} strokeWidth={2.5} /></div> Fila da Coordenação
@@ -169,6 +215,63 @@ const CoordTab: React.FC<CoordTabProps> = ({ coordinationQueue, suspensions, use
                 <button onClick={() => setEndSuspensionModal(s)}
                   className="w-full py-3 bg-destructive text-destructive-foreground rounded-xl text-[11px] font-bold shadow-md active:scale-95 transition-all flex justify-center items-center gap-1.5">
                   <CheckCircle2 size={16} /> Finalizar e Libertar Acesso
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Early Warning System */}
+      {warnings.length > 0 && (
+        <div className="glass rounded-3xl p-6 shadow-lg border-l-4 border-l-destructive mb-6 animate-pulse-slow relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none"><ShieldAlert size={100} /></div>
+          <h3 className="font-black text-sm text-destructive uppercase tracking-widest flex items-center gap-2 mb-4 relative z-10">
+            <AlertOctagon size={18} /> Early Warning System (Últimos 7 dias)
+          </h3>
+          <div className="space-y-3 relative z-10">
+            {warnings.map((w, i) => (
+              <div key={i} className="flex justify-between items-center p-3 bg-card border border-destructive/20 rounded-xl">
+                <div>
+                  <p className="text-sm font-bold text-foreground">{w.nome}</p>
+                  <p className="text-[10px] font-extrabold uppercase text-muted-foreground">{w.turma}</p>
+                </div>
+                <div className="flex gap-3 text-right">
+                  {w.ocorrencias >= 3 && <span className="text-xs font-bold text-destructive flex items-center gap-1 bg-destructive/10 px-2 py-1 rounded-md"><ShieldAlert size={12} /> {w.ocorrencias} Ocorrências</span>}
+                  {w.atrasos >= 3 && <span className="text-xs font-bold text-warning flex items-center gap-1 bg-warning/10 px-2 py-1 rounded-md"><CalendarClock size={12} /> {w.atrasos} Atrasos</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Avisos Section */}
+      <div className="glass rounded-3xl p-6 shadow-lg mb-6 border border-blue-500/20">
+        <h3 className="font-black text-lg flex items-center gap-2 mb-4 text-foreground">
+          <div className="bg-blue-500/10 text-blue-500 p-2 rounded-xl"><Bell size={20} strokeWidth={2.5} /></div> Mural de Avisos (Para Pais)
+        </h3>
+
+        <div className="flex gap-2 mb-6">
+          <input type="text" value={novoAviso} onChange={e => setNovoAviso(e.target.value)}
+            placeholder="Digite um novo aviso para os pais..."
+            className="flex-1 p-3 bg-secondary rounded-xl border border-border outline-none text-sm font-medium" />
+          <button onClick={handlePostAviso} className="bg-blue-500 text-white p-3 rounded-xl hover:bg-blue-600 transition-colors shadow-md">
+            <Send size={18} />
+          </button>
+        </div>
+
+        {avisos.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Avisos Ativos</p>
+            {avisos.map(aviso => (
+              <div key={aviso.id} className="p-3 bg-card border border-border rounded-xl flex justify-between items-center gap-4">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">{aviso.texto}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Por {aviso.autor} em {aviso.timestamp}</p>
+                </div>
+                <button onClick={() => handleDeleteAviso(aviso.id)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
+                  <X size={16} />
                 </button>
               </div>
             ))}

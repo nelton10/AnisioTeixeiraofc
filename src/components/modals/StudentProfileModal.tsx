@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Aluno, HistoryRecord, LibraryItem } from '@/types';
-import { X, AlertTriangle, CheckCircle, Clock, BookOpen, User } from 'lucide-react';
+import { X, AlertTriangle, CheckCircle, Clock, BookOpen, User, Phone, MessageCircleHeart } from 'lucide-react';
 
 interface StudentProfileModalProps {
     aluno: Aluno;
@@ -44,6 +44,13 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ aluno,
         StatusIcon = Clock;
     }
 
+    const handleWhatsAppMessage = () => {
+        if (!aluno.responsavel_telefone) return;
+        const phone = aluno.responsavel_telefone.replace(/\D/g, '');
+        const message = encodeURIComponent(`Olá, sou da coordenação da Escola Anísio Teixeira. Gostaríamos de informar que o/a aluno(a) ${aluno.nome} recebeu um mérito hoje pelo seu bom comportamento/desempenho! Parabéns!`);
+        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+    };
+
     return (
         <div className="fixed inset-0 z-[200] bg-background/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in custom-scrollbar">
             <div className="glass-strong rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-white/10 animate-scale-in overflow-hidden">
@@ -66,6 +73,21 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ aluno,
                                 <StatusIcon size={14} /> Status: {statusText}
                             </span>
                         </div>
+
+                        {(aluno.responsavel_nome || aluno.responsavel_telefone) && (
+                            <div className="mt-4 p-3 bg-secondary/50 rounded-xl border border-white/5 flex flex-wrap gap-2 items-center justify-between">
+                                <div className="text-left text-xs">
+                                    <p className="font-bold text-muted-foreground mb-0.5 uppercase tracking-wider text-[9px]">Contato do Responsável</p>
+                                    <p className="font-semibold text-foreground">{aluno.responsavel_nome || 'Nome não informado'}</p>
+                                    {aluno.responsavel_telefone && <p className="text-muted-foreground flex items-center gap-1 mt-0.5"><Phone size={10} /> {aluno.responsavel_telefone}</p>}
+                                </div>
+                                {aluno.responsavel_telefone && (
+                                    <button onClick={handleWhatsAppMessage} className="bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white border border-[#25D366]/20 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors text-xs font-black">
+                                        <MessageCircleHeart size={14} /> Reforço Positivo
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 

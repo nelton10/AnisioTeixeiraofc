@@ -1,14 +1,31 @@
-import React, { useMemo } from 'react';
-import { HistoryRecord, Aluno, LibraryItem } from '@/types';
-import { ShieldAlert, Star, Clock, Library, History, Bell, CalendarClock } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { HistoryRecord, Aluno, LibraryItem, Aviso } from '@/types';
+import { ShieldAlert, Star, Clock, Library, History, Bell, CalendarClock, Download, FileText, UserCog, Send } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+import { updateAluno } from '@/lib/store';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface ParentDashboardTabProps {
     studentName: string;
     records: HistoryRecord[];
     libraryQueue: LibraryItem[];
+    avisos: Aviso[];
+    alunosList: Aluno[];
+    refreshData: () => Promise<void>;
 }
 
-const ParentDashboardTab: React.FC<ParentDashboardTabProps> = ({ studentName, records, libraryQueue }) => {
+const ParentDashboardTab: React.FC<ParentDashboardTabProps> = ({ studentName, records, libraryQueue, avisos, alunosList, refreshData }) => {
+    const studentData = useMemo(() => alunosList.find(a => a.nome.toLowerCase() === studentName.toLowerCase()), [alunosList, studentName]);
+
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [parentForm, setParentForm] = useState({
+        responsavel_nome: studentData?.responsavel_nome || '',
+        responsavel_telefone: studentData?.responsavel_telefone || '',
+        responsavel_email: studentData?.responsavel_email || ''
+    });
+
     const childRecords = useMemo(() => {
         return records.filter(r => r.alunoNome?.toLowerCase() === studentName.toLowerCase());
     }, [records, studentName]);
@@ -16,6 +33,10 @@ const ParentDashboardTab: React.FC<ParentDashboardTabProps> = ({ studentName, re
     const childLibraryInfo = useMemo(() => {
         return libraryQueue.filter(l => l.alunoNome?.toLowerCase() === studentName.toLowerCase());
     }, [libraryQueue, studentName]);
+
+    const activeAvisos = useMemo(() => {
+        return avisos.slice(0, 5); // Show top 5 latest
+    }, [avisos]);
 
     const stats = useMemo(() => {
         let saidas = 0, ocorrencias = 0, meritos = 0, atrasos = 0;
@@ -30,14 +51,138 @@ const ParentDashboardTab: React.FC<ParentDashboardTabProps> = ({ studentName, re
 
     const recentEvents = childRecords.slice(0, 10);
 
+    const handleUpdateParentInfo = async () => {
+        if (!studentData) return;
+        try {
+            await updateAluno(studentData.id, parentForm);
+            await refreshData();
+            setIsEditingProfile(false);
+            toast.success("Dados de contato atualizados com sucesso!");
+        } catch (error) {
+            toast.error("Erro ao atualizar dados.");
+            console.error(error);
+        }
+    };
+
+    const generatePDF = () => {
+        const doc = new jsPDF();
+
+        // Header
+        doc.setFillColor(34, 197, 94); // Primary green color
+        doc.rect(0, 0, 210, 40, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Escola Anísio Teixeira', 105, 20, { align: 'center' });
+        doc.setFontSize(14);
+        doc.text('Boletim de Atitude e Frequência', 105, 30, { align: 'center' });
+
+        // Student Info
+        doc.setTextColor(50, 50, 50);
+        doc.setFontSize(12);
+        doc.text(`Aluno: ${studentName}`, 14, 50);
+        doc.text(`Turma: ${studentData?.turma || 'N/A'}`, 14, 58);
+        doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-PT')}`, 14, 66);
+
+        // Summary box
+        doc.setDrawColor(200, 200, 200);
+        doc.setFillColor(245, 245, 245);
+        doc.roundedRect(14, 75, 182, 30, 3, 3, 'FD');
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Total de Méritos: ${stats.meritos}`, 20, 85);
+        doc.text(`Total de Ocorrências: ${stats.ocorrencias}`, 20, 95);
+        doc.text(`Total de Atrasos: ${stats.atrasos}`, 110, 85);
+        doc.text(`Total de Saídas: ${stats.saidas}`, 110, 95);
+
+        // Table Data
+        const tableBody = childRecords.map(r => [
+            r.timestamp,
+            r.categoria.toUpperCase(),
+            r.detalhe,
+            r.professor
+        ]);
+
+        autoTable(doc, {
+            startY: 115,
+            head: [['Data/Hora', 'Categoria', 'Descrição', 'Registrado Por']],
+            body: tableBody,
+            theme: 'grid',
+            headStyles: { fillColor: [34, 197, 94] },
+            styles: { fontSize: 9, cellPadding: 3 },
+            columnStyles: {
+                0: { cellWidth: 35 },
+                1: { cellWidth: 30 },
+                2: { cellWidth: 85 },
+                3: { cellWidth: 32 }
+            }
+        });
+
+        doc.save(`boletim_atitude_${studentName.replace(/\\s+/g, '_')}.pdf`);
+        toast.success("Boletim PDF gerado com sucesso!");
+    };
+
     return (
         <div className="space-y-6 animate-fade-in pb-10">
             <div className="glass-strong rounded-3xl p-6 shadow-xl relative overflow-hidden text-center mb-8">
                 <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl shadow-primary"></div>
+                <div className="absolute top-4 right-4">
+                    <button onClick={() => setIsEditingProfile(!isEditingProfile)} className="p-2 bg-secondary/80 text-foreground hover:bg-primary hover:text-primary-foreground rounded-full transition-colors" title="Editar Contato">
+                        <UserCog size={20} />
+                    </button>
+                </div>
                 <h2 className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Área dos Pais</h2>
                 <h1 className="text-2xl font-black text-foreground">{studentName}</h1>
                 <p className="text-sm font-semibold text-muted-foreground mt-1">Bem-vindo(a) ao acompanhamento escolar em tempo real.</p>
+
+                <button onClick={generatePDF} className="mt-4 mx-auto flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-primary-foreground font-bold py-2 px-6 rounded-full transition-all text-sm">
+                    <FileText size={16} /> Gerar Boletim (PDF)
+                </button>
             </div>
+
+            {isEditingProfile && (
+                <div className="glass rounded-3xl p-6 shadow-lg mb-8 border border-primary/20 animate-slide-down">
+                    <h3 className="text-sm font-black flex items-center gap-2 mb-4 text-foreground">
+                        <UserCog className="text-primary" size={18} /> Dados do Responsável
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label className="text-xs font-bold text-muted-foreground mb-1 block">Nome do Responsável</label>
+                            <input type="text" value={parentForm.responsavel_nome} onChange={e => setParentForm({ ...parentForm, responsavel_nome: e.target.value })} className="w-full p-3 bg-secondary rounded-xl border border-border outline-none text-sm font-bold" placeholder="Ex: Maria Silva" />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-muted-foreground mb-1 block">Telefone (WahtsApp)</label>
+                            <input type="text" value={parentForm.responsavel_telefone} onChange={e => setParentForm({ ...parentForm, responsavel_telefone: e.target.value })} className="w-full p-3 bg-secondary rounded-xl border border-border outline-none text-sm font-bold" placeholder="Ex: 912345678" />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-muted-foreground mb-1 block">E-mail</label>
+                            <input type="email" value={parentForm.responsavel_email} onChange={e => setParentForm({ ...parentForm, responsavel_email: e.target.value })} className="w-full p-3 bg-secondary rounded-xl border border-border outline-none text-sm font-bold" placeholder="Ex: maria@email.com" />
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-3">
+                        <button onClick={() => setIsEditingProfile(false)} className="px-5 py-2 rounded-xl bg-secondary font-bold text-sm">Cancelar</button>
+                        <button onClick={handleUpdateParentInfo} className="px-5 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-sm">Salvar Dados</button>
+                    </div>
+                </div>
+            )}
+
+            {activeAvisos.length > 0 && (
+                <div className="glass rounded-3xl p-6 shadow-lg border-l-4 border-l-blue-500 mb-8">
+                    <h3 className="text-sm font-black flex items-center gap-2 mb-4 text-foreground">
+                        <Bell className="text-blue-500" size={18} /> Mural de Avisos da Coordenação
+                    </h3>
+                    <div className="space-y-3">
+                        {activeAvisos.map(aviso => (
+                            <div key={aviso.id} className="p-4 bg-secondary/30 rounded-2xl border border-blue-500/10">
+                                <p className="text-sm font-medium text-foreground">{aviso.texto}</p>
+                                <div className="flex justify-between items-center mt-2">
+                                    <span className="text-[10px] text-muted-foreground font-bold">{aviso.timestamp}</span>
+                                    <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded uppercase font-black">{aviso.autor}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
                 {/* Merits */}
