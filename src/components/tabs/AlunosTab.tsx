@@ -11,10 +11,11 @@ import {
     Check,
     ArrowRightLeft,
     FileSpreadsheet,
-    User
+    User,
+    AlertTriangle
 } from 'lucide-react';
 import * as store from '@/lib/store';
-import { HistoryRecord, LibraryItem, Aluno } from '@/types';
+import { HistoryRecord, LibraryItem, Aluno, UserRole } from '@/types';
 import { StudentProfileModal } from '@/components/modals/StudentProfileModal';
 
 interface AlunosTabProps {
@@ -22,16 +23,19 @@ interface AlunosTabProps {
     turmasExistentes: string[];
     records: HistoryRecord[];
     libraryQueue: LibraryItem[];
+    userRole: UserRole;
     notify: (msg: string) => void;
     refreshData: () => Promise<void>;
 }
 
-const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records, libraryQueue, notify, refreshData }) => {
+const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records, libraryQueue, userRole, notify, refreshData }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedTurma, setSelectedTurma] = useState('Todas');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingAluno, setEditingAluno] = useState<Aluno | null>(null);
     const [viewingAluno, setViewingAluno] = useState<Aluno | null>(null);
+    const [suspendAlunoModal, setSuspendAlunoModal] = useState<Aluno | null>(null);
+    const [suspendReturnDate, setSuspendReturnDate] = useState('');
 
     const [formData, setFormData] = useState({ nome: '', turma: '' });
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -66,6 +70,29 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records
             notify("Dados atualizados!");
         } catch (err) {
             notify("Erro ao atualizar.");
+        }
+    };
+
+    const handleSuspendSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!suspendAlunoModal || !suspendReturnDate.trim()) {
+            return notify("Preencha a data de retorno.");
+        }
+        try {
+            await store.addSuspension({
+                id: store.generateId(),
+                alunoId: suspendAlunoModal.id,
+                alunoNome: suspendAlunoModal.nome,
+                turma: suspendAlunoModal.turma,
+                returnDate: suspendReturnDate,
+                timestamp: new Date().toLocaleString('pt-PT')
+            });
+            setSuspendAlunoModal(null);
+            setSuspendReturnDate('');
+            await refreshData();
+            notify("Aluno suspenso com sucesso!");
+        } catch (err) {
+            notify("Erro ao aplicar suspensão.");
         }
     };
 
@@ -259,9 +286,19 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records
                                 <button
                                     onClick={() => handleDelete(a.id, a.nome)}
                                     className="p-2.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition-all"
+                                    title="Remover Aluno"
                                 >
                                     <Trash2 size={16} />
                                 </button>
+                                {userRole === 'admin' && (
+                                    <button
+                                        onClick={() => setSuspendAlunoModal(a)}
+                                        className="p-2.5 text-orange-500 hover:bg-orange-500/10 rounded-lg transition-all"
+                                        title="Suspender Aluno (Medida Disciplinar)"
+                                    >
+                                        <AlertTriangle size={16} />
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -351,6 +388,36 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records
                     libraryQueue={libraryQueue}
                     onClose={() => setViewingAluno(null)}
                 />
+            )}
+
+            {/* Modal Suspender Aluno */}
+            {suspendAlunoModal && (
+                <div className="fixed inset-0 z-[200] bg-foreground/40 backdrop-blur-sm flex items-center justify-center p-4">
+                    <form onSubmit={handleSuspendSubmit} className="glass-strong rounded-3xl p-8 max-w-sm w-full space-y-6 shadow-2xl animate-scale-in border-t-4 border-t-orange-500">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h3 className="text-xl font-black text-foreground flex items-center gap-2"><AlertTriangle className="text-orange-500" /> Suspender Aluno</h3>
+                                <p className="text-[10px] text-muted-foreground font-bold tracking-widest mt-1 uppercase">{suspendAlunoModal.nome}</p>
+                            </div>
+                            <button type="button" onClick={() => setSuspendAlunoModal(null)}><X size={20} /></button>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Data de Retorno Prevista</label>
+                                <input
+                                    type="date"
+                                    value={suspendReturnDate}
+                                    onChange={e => setSuspendReturnDate(e.target.value)}
+                                    className="w-full p-4 bg-secondary rounded-2xl border border-border outline-none focus:bg-card focus:ring-2 focus:ring-orange-500/20 transition-all font-bold text-foreground"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <button type="submit" className="w-full py-4 bg-orange-500 text-white rounded-2xl font-black shadow-lg shadow-orange-500/20 active:scale-95 transition-all">
+                            APLICAR SUSPENSÃO
+                        </button>
+                    </form>
+                </div>
             )}
         </div>
     );
