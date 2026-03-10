@@ -25,7 +25,7 @@ export async function getConfig(): Promise<AppConfig & { alunosList: Aluno[] }> 
   const defaultConfig: AppConfig = {
     autoBlocks: [],
     exitLimitMinutes: 15,
-    passwords: { admin: 'gestao', professor: 'prof', apoio: 'apoio' },
+    passwords: { admin: 'gestao', professor: 'prof', apoio: 'apoio', parent: 'pais' },
   };
 
   try {
@@ -375,8 +375,8 @@ export function getSavedAuth() {
   } catch { return null; }
 }
 
-export function saveAuth(role: string, name: string) {
-  try { localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify({ role, name })); } catch { }
+export function saveAuth(role: string, name: string, linkedStudentName?: string) {
+  try { localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify({ role, name, linkedStudentName })); } catch { }
 }
 
 export function clearAuth() {

@@ -31,17 +31,17 @@ interface TabNavProps {
 }
 
 const tabs: { id: string; label: string; icon: typeof Clock; hideFor?: string[]; badge?: string }[] = [
-  { id: 'saidas', label: 'Saídas', icon: Clock },
-  { id: 'ocorrencias', label: 'Ocorrências', icon: AlertCircle, hideFor: ['aluno'] },
-  { id: 'historico', label: 'Histórico', icon: History, hideFor: ['aluno'] },
-  { id: 'avaliar_aula', label: 'Avaliar Aula', icon: Star, hideFor: ['aluno'] },
-  { id: 'atrasos', label: 'Entradas', icon: DoorOpen, hideFor: ['professor', 'aluno'] },
-  { id: 'coord', label: 'Coord.', icon: GraduationCap, hideFor: ['aluno'], badge: 'coordCount' },
-  { id: 'medidas', label: 'Biblioteca', icon: Library, hideFor: ['aluno'], badge: 'libraryCount' },
-  { id: 'pesquisa', label: 'Pesquisa', icon: Search, hideFor: ['aluno'] },
-  { id: 'acompanhamento', label: 'Análise', icon: BarChart3, hideFor: ['professor', 'aluno'] },
-  { id: 'alunos', label: 'Alunos', icon: GraduationCap, hideFor: ['professor', 'aluno'] },
-  { id: 'admin', label: 'Config', icon: Settings, hideFor: ['professor', 'aluno'] },
+  { id: 'saidas', label: 'Saídas', icon: Clock, hideFor: ['parent'] },
+  { id: 'ocorrencias', label: 'Ocorrências', icon: AlertCircle, hideFor: ['aluno', 'parent'] },
+  { id: 'historico', label: 'Histórico', icon: History, hideFor: ['aluno', 'parent'] },
+  { id: 'avaliar_aula', label: 'Avaliar Aula', icon: Star, hideFor: ['aluno', 'parent'] },
+  { id: 'atrasos', label: 'Entradas', icon: DoorOpen, hideFor: ['professor', 'aluno', 'parent'] },
+  { id: 'coord', label: 'Coord.', icon: GraduationCap, hideFor: ['aluno', 'parent'], badge: 'coordCount' },
+  { id: 'medidas', label: 'Biblioteca', icon: Library, hideFor: ['aluno', 'parent'], badge: 'libraryCount' },
+  { id: 'pesquisa', label: 'Pesquisa', icon: Search, hideFor: ['aluno', 'parent'] },
+  { id: 'acompanhamento', label: 'Análise', icon: BarChart3, hideFor: ['professor', 'aluno', 'parent'] },
+  { id: 'alunos', label: 'Alunos', icon: GraduationCap, hideFor: ['professor', 'aluno', 'parent'] },
+  { id: 'admin', label: 'Config', icon: Settings, hideFor: ['professor', 'aluno', 'parent'] },
 ];
 
 export const TabNav: React.FC<TabNavProps> = ({ activeTab, setActiveTab, userRole, coordCount, libraryCount }) => {
@@ -49,7 +49,7 @@ export const TabNav: React.FC<TabNavProps> = ({ activeTab, setActiveTab, userRol
 
   return (
     <nav className="px-4 py-3 max-w-2xl mx-auto w-full overflow-x-auto no-scrollbar sticky top-[65px] z-40 bg-background/80 backdrop-blur-sm">
-      <div className="flex glass p-1.5 rounded-2xl gap-1 min-w-max">
+      {userRole !== 'parent' && <div className="flex glass p-1.5 rounded-2xl gap-1 min-w-max">
         {tabs.filter(t => !t.hideFor?.includes(userRole as never)).map(t => {
           const Icon = t.icon;
           const badgeVal = t.badge ? badges[t.badge] : 0;
@@ -72,7 +72,7 @@ export const TabNav: React.FC<TabNavProps> = ({ activeTab, setActiveTab, userRol
             </button>
           );
         })}
-      </div>
+      </div>}
     </nav>
   );
 };

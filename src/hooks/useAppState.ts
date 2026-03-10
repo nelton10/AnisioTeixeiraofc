@@ -17,7 +17,7 @@ export function useAppState() {
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [config, setConfig] = useState<AppConfig>({
     autoBlocks: [], exitLimitMinutes: 15,
-    passwords: { admin: 'gestao', professor: 'prof', apoio: 'apoio' }
+    passwords: { admin: 'gestao', professor: 'prof', apoio: 'apoio', parent: 'pais' }
   });
   const [activeTab, setActiveTab] = useState('saidas');
   const [showToast, setShowToast] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export function useAppState() {
         setConfig({
           autoBlocks: cfg.autoBlocks || [],
           exitLimitMinutes: cfg.exitLimitMinutes || 15,
-          passwords: cfg.passwords || { admin: 'gestao', professor: 'prof', apoio: 'apoio' }
+          passwords: { ...{ admin: 'gestao', professor: 'prof', apoio: 'apoio', parent: 'pais' }, ...(cfg.passwords || {}) }
         });
       }
 
@@ -62,7 +62,7 @@ export function useAppState() {
   useEffect(() => {
     const saved = store.getSavedAuth();
     if (saved) {
-      setAuthState({ isAuthenticated: true, username: saved.name, role: saved.role as UserRole });
+      setAuthState({ isAuthenticated: true, username: saved.name, role: saved.role as UserRole, linkedStudentName: saved.linkedStudentName });
     }
     refreshData();
   }, [refreshData]);
@@ -99,16 +99,23 @@ export function useAppState() {
   }, []);
 
   const login = useCallback((username: string, password: string, rememberMe: boolean) => {
-    if (!username) { notify("Introduza o seu nome."); return false; }
+    if (!username) { notify("Introduza o seu nome (ou do Aluno)."); return false; }
     const pass = password.trim().toLowerCase();
     const p = config.passwords;
     let role: UserRole | '' = '';
+    let linkedStudentName: string | undefined = undefined;
+
     if (pass === p.admin.toLowerCase() || pass === 'gestão') role = 'admin';
     else if (pass === p.professor.toLowerCase()) role = 'professor';
-    else if (pass === p.apoio.toLowerCase()) { role = 'aluno'; }
+    else if (pass === p.apoio.toLowerCase()) role = 'aluno';
+    else if (p.parent && pass === p.parent.toLowerCase()) {
+      role = 'parent';
+      linkedStudentName = username.trim();
+    }
     else { notify("PIN incorreto."); return false; }
-    setAuthState({ isAuthenticated: true, username, role });
-    if (rememberMe) store.saveAuth(role, username);
+
+    setAuthState({ isAuthenticated: true, username, role, linkedStudentName });
+    if (rememberMe) store.saveAuth(role, username, linkedStudentName);
     return true;
   }, [config.passwords, notify]);
 

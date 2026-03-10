@@ -13,6 +13,7 @@ import AnaliseTab from '@/components/tabs/AnaliseTab';
 import AdminTab from '@/components/tabs/AdminTab';
 import AlunosTab from '@/components/tabs/AlunosTab';
 import AnaliseAulaTab from '@/components/tabs/AnaliseAulaTab';
+import ParentDashboardTab from '@/components/tabs/ParentDashboardTab';
 
 const Index = () => {
   const state = useAppState();
@@ -51,55 +52,65 @@ const Index = () => {
       />
 
       <main className="px-4 pb-28 pt-2 max-w-2xl mx-auto w-full space-y-6">
-        {state.activeTab === 'saidas' && (
-          <SaidasTab
-            alunos={state.alunos} activeExits={state.activeExits} config={state.config}
-            suspensions={state.suspensions} avisos={state.avisos} turmasExistentes={state.turmasExistentes}
-            userRole={state.authState.role} username={state.authState.username}
-            activeBlock={state.activeBlock} getTodayExitsCount={state.getTodayExitsCount}
-            notify={state.notify} refreshData={state.refreshData}
+        {state.authState.role === 'parent' && state.authState.linkedStudentName ? (
+          <ParentDashboardTab
+            studentName={state.authState.linkedStudentName}
+            records={state.records}
+            libraryQueue={state.libraryQueue}
           />
-        )}
-        {state.activeTab === 'ocorrencias' && (
-          <OcorrenciasTab alunos={state.alunos} turmasExistentes={state.turmasExistentes}
-            userRole={state.authState.role} username={state.authState.username}
-            notify={state.notify} refreshData={state.refreshData} />
-        )}
-        {state.activeTab === 'historico' && (
-          <HistoricoTab records={state.records} turmasExistentes={state.turmasExistentes}
-            userRole={state.authState.role} notify={state.notify} refreshData={state.refreshData} />
-        )}
-        {state.activeTab === 'atrasos' && (
-          <AtrasosTab alunos={state.alunos} turmasExistentes={state.turmasExistentes}
-            username={state.authState.username} notify={state.notify} refreshData={state.refreshData} />
-        )}
-        {state.activeTab === 'coord' && (
-          <CoordTab coordinationQueue={state.coordinationQueue} suspensions={state.suspensions}
-            userRole={state.authState.role} username={state.authState.username}
-            notify={state.notify} refreshData={state.refreshData} />
-        )}
-        {state.activeTab === 'medidas' && (
-          <BibliotecaTab libraryQueue={state.libraryQueue} username={state.authState.username}
-            notify={state.notify} refreshData={state.refreshData} />
-        )}
-        {state.activeTab === 'pesquisa' && (
-          <PesquisaTab alunos={state.alunos} records={state.records} turmasExistentes={state.turmasExistentes} />
-        )}
-        {state.activeTab === 'avaliar_aula' && (
-          <AnaliseAulaTab records={state.records} turmasExistentes={state.turmasExistentes}
-            username={state.authState.username} userRole={state.authState.role}
-            notify={state.notify} refreshData={state.refreshData} />
-        )}
-        {state.activeTab === 'acompanhamento' && (
-          <AnaliseTab records={state.records} turmasExistentes={state.turmasExistentes} statsSummary={state.statsSummary} />
-        )}
-        {state.activeTab === 'alunos' && (
-          <AlunosTab alunos={state.alunos} turmasExistentes={state.turmasExistentes}
-            notify={state.notify} refreshData={state.refreshData} />
-        )}
-        {state.activeTab === 'admin' && (
-          <AdminTab alunos={state.alunos} history={state.records} config={state.config}
-            saveConfig={state.saveConfig} notify={state.notify} refreshData={state.refreshData} />
+        ) : (
+          <>
+            {state.activeTab === 'saidas' && (
+              <SaidasTab
+                alunos={state.alunos} activeExits={state.activeExits} config={state.config}
+                suspensions={state.suspensions} avisos={state.avisos} turmasExistentes={state.turmasExistentes}
+                userRole={state.authState.role} username={state.authState.username}
+                activeBlock={state.activeBlock} getTodayExitsCount={state.getTodayExitsCount}
+                notify={state.notify} refreshData={state.refreshData}
+              />
+            )}
+            {state.activeTab === 'ocorrencias' && (
+              <OcorrenciasTab alunos={state.alunos} turmasExistentes={state.turmasExistentes}
+                userRole={state.authState.role} username={state.authState.username}
+                notify={state.notify} refreshData={state.refreshData} />
+            )}
+            {state.activeTab === 'historico' && (
+              <HistoricoTab records={state.records} turmasExistentes={state.turmasExistentes}
+                userRole={state.authState.role} notify={state.notify} refreshData={state.refreshData} />
+            )}
+            {state.activeTab === 'atrasos' && (
+              <AtrasosTab alunos={state.alunos} turmasExistentes={state.turmasExistentes}
+                username={state.authState.username} notify={state.notify} refreshData={state.refreshData} />
+            )}
+            {state.activeTab === 'coord' && (
+              <CoordTab coordinationQueue={state.coordinationQueue} suspensions={state.suspensions}
+                userRole={state.authState.role} username={state.authState.username}
+                notify={state.notify} refreshData={state.refreshData} />
+            )}
+            {state.activeTab === 'medidas' && (
+              <BibliotecaTab libraryQueue={state.libraryQueue} username={state.authState.username}
+                notify={state.notify} refreshData={state.refreshData} />
+            )}
+            {state.activeTab === 'pesquisa' && (
+              <PesquisaTab alunos={state.alunos} records={state.records} turmasExistentes={state.turmasExistentes} />
+            )}
+            {state.activeTab === 'avaliar_aula' && (
+              <AnaliseAulaTab records={state.records} turmasExistentes={state.turmasExistentes}
+                username={state.authState.username} userRole={state.authState.role}
+                notify={state.notify} refreshData={state.refreshData} />
+            )}
+            {state.activeTab === 'acompanhamento' && (
+              <AnaliseTab records={state.records} turmasExistentes={state.turmasExistentes} statsSummary={state.statsSummary} />
+            )}
+            {state.activeTab === 'alunos' && (
+              <AlunosTab alunos={state.alunos} turmasExistentes={state.turmasExistentes}
+                notify={state.notify} refreshData={state.refreshData} />
+            )}
+            {state.activeTab === 'admin' && (
+              <AdminTab alunos={state.alunos} history={state.records} config={state.config}
+                saveConfig={state.saveConfig} notify={state.notify} refreshData={state.refreshData} />
+            )}
+          </>
         )}
 
       </main>

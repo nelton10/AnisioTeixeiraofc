@@ -150,7 +150,7 @@ const AdminTab: React.FC<AdminTabProps> = ({ alunos, history, config, saveConfig
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase text-muted-foreground ml-2">Admin / Gestão</label>
             <input
@@ -175,6 +175,15 @@ const AdminTab: React.FC<AdminTabProps> = ({ alunos, history, config, saveConfig
               type="text"
               value={passwords.apoio}
               onChange={e => setPasswords({ ...passwords, apoio: e.target.value })}
+              className="w-full p-4 bg-secondary rounded-2xl border border-border outline-none focus:bg-card focus:ring-2 focus:ring-primary/20 transition-all font-bold text-foreground"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-muted-foreground ml-2">Pais / Encarregados</label>
+            <input
+              type="text"
+              value={passwords.parent || ''}
+              onChange={e => setPasswords({ ...passwords, parent: e.target.value })}
               className="w-full p-4 bg-secondary rounded-2xl border border-border outline-none focus:bg-card focus:ring-2 focus:ring-primary/20 transition-all font-bold text-foreground"
             />
           </div>

@@ -1,12 +1,33 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Activity, UserX, BarChart3, FileSpreadsheet, Download, DatabaseBackup } from 'lucide-react';
-import { HistoryRecord, Aluno } from '@/types';
+import { Search, Activity, UserX, BarChart3, FileSpreadsheet, Download, DatabaseBackup, PieChart as PieChartIcon, TrendingUp } from 'lucide-react';
+import { HistoryRecord } from '@/types';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line, CartesianGrid
+} from 'recharts';
 
 interface AnaliseTabProps {
   records: HistoryRecord[];
   turmasExistentes: string[];
   statsSummary: { totalSaidas: number; totalOcors: number; totalAtrasos: number; totalMeritos: number };
 }
+
+// Custom tooltip for styled Recharts tooltips
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="glass-strong p-3 rounded-xl shadow-lg border border-border/50">
+        <p className="text-xs font-bold text-muted-foreground mb-1">{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <p key={index} className="text-sm font-black" style={{ color: entry.color || entry.payload.fill }}>
+            {entry.name}: {entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, statsSummary }) => {
   const [filtroDataInicio, setFiltroDataInicio] = useState('');
@@ -25,7 +46,6 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
         if (filtroDataInicio) { const d = new Date(filtroDataInicio); d.setHours(0, 0, 0, 0); if (rDate < d) return false; }
         if (filtroDataFim) { const d = new Date(filtroDataFim); d.setHours(23, 59, 59, 999); if (rDate > d) return false; }
       }
-
       return true;
     });
   }, [records, selectedTurma, filtroBuscaNome, filtroDataInicio, filtroDataFim]);
@@ -34,22 +54,36 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
     const occTypes: Record<string, number> = {};
     const infratores: Record<string, number> = {};
     const turmaStats: Record<string, number> = {};
+    const lineDataMap: Record<string, { saidas: number, ocorrencias: number }> = {};
+
     filteredHistory.forEach(r => {
+      // 1. Ocorrencias and Turmas Data
       if (r.categoria === 'ocorrencia') {
         const tipo = (r.detalhe || "").split(' [')[0] || "?";
         occTypes[tipo] = (occTypes[tipo] || 0) + 1;
-
         if (r.alunoNome) infratores[r.alunoNome] = (infratores[r.alunoNome] || 0) + 1;
         if (r.turma) turmaStats[r.turma] = (turmaStats[r.turma] || 0) + 1;
       }
+      // 2. Trend line data (Saídas vs Ocorrências by Date)
+      if (r.rawTimestamp && (r.categoria === 'saida' || r.categoria === 'ocorrencia')) {
+        const d = new Date(r.rawTimestamp);
+        const dateKey = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (!lineDataMap[dateKey]) lineDataMap[dateKey] = { saidas: 0, ocorrencias: 0 };
+        if (r.categoria === 'saida') lineDataMap[dateKey].saidas++;
+        if (r.categoria === 'ocorrencia') lineDataMap[dateKey].ocorrencias++;
+      }
     });
+
     const occArr = Object.entries(occTypes).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 6);
     const topInfr = Object.entries(infratores).map(([nome, count]) => ({ nome, count })).sort((a, b) => b.count - a.count).slice(0, 10);
-    const turmaArr = Object.entries(turmaStats).map(([turma, count]) => ({ turma, count })).sort((a, b) => b.count - a.count).slice(0, 5);
-    return {
-      occArr, maxOcc: occArr[0]?.count || 1,
-      topInfr, turmaArr, maxTurma: turmaArr[0]?.count || 1,
-    };
+    const turmaArr = Object.entries(turmaStats).map(([turma, count]) => ({ turma, count, fill: 'hsl(var(--primary))' })).sort((a, b) => b.count - a.count).slice(0, 5);
+
+    // Sort line data by date string parsing (rough sorting)
+    const trendData = Object.entries(lineDataMap)
+      .map(([date, counts]) => ({ date, ...counts }))
+      .slice(-7); // Last 7 days with data
+
+    return { occArr, maxOcc: occArr[0]?.count || 1, topInfr, turmaArr, trendData };
   }, [filteredHistory]);
 
   const downloadReport = () => {
@@ -74,6 +108,14 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
   const ocorrenciasPeriodo = filteredHistory.filter(r => r.categoria === 'ocorrencia').length;
   const diasComOcorrencia = new Set(records.filter(r => r.categoria === 'ocorrencia').map(r => new Date(r.rawTimestamp || 0).setHours(0, 0, 0, 0))).size;
   const mediaPorDia = diasComOcorrencia > 0 ? parseFloat((ocorrenciasTotais / diasComOcorrencia).toFixed(1)) : 0;
+
+  // Pie Chart Data
+  const pieData = [
+    { name: 'Saídas', value: statsSummary.totalSaidas, color: 'hsl(var(--primary))' },
+    { name: 'Ocorrências', value: statsSummary.totalOcors, color: 'hsl(var(--destructive))' },
+    { name: 'Atrasos', value: statsSummary.totalAtrasos, color: 'hsl(var(--warning))' },
+    { name: 'Méritos', value: statsSummary.totalMeritos, color: 'hsl(var(--accent))' },
+  ].filter(d => d.value > 0);
 
   return (
     <div className="space-y-6 pb-10 animate-fade-in">
@@ -118,45 +160,76 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
         </div>
       </div>
 
-      {/* Today Stats */}
-      <div className="grid grid-cols-4 gap-2.5">
-        {[
-          { label: 'Saídas Hj', val: statsSummary.totalSaidas, color: 'text-primary' },
-          { label: 'Ocorr. Hj', val: statsSummary.totalOcors, color: 'text-destructive' },
-          { label: 'Méritos Hj', val: statsSummary.totalMeritos, color: 'text-accent' },
-          { label: 'Atrasos Hj', val: statsSummary.totalAtrasos, color: 'text-warning' },
-        ].map(s => (
-          <div key={s.label} className="glass p-4 rounded-3xl text-center hover:shadow-md transition-shadow">
-            <p className="text-[9px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1">{s.label}</p>
-            <p className={`text-2xl font-black ${s.color}`}>{s.val}</p>
+      {/* Charts Row 1: Pie and Line */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Pie Chart: Distribution */}
+        <div className="glass rounded-3xl p-6 shadow-lg h-72 flex flex-col">
+          <h3 className="text-sm font-black text-foreground mb-2 flex items-center gap-2">
+            <PieChartIcon size={18} className="text-primary" /> Distribuição Diária
+          </h3>
+          <div className="flex-1 w-full relative">
+            {pieData.length === 0 ? <p className="text-xs text-muted-foreground m-auto absolute inset-0 flex items-center justify-center">Sem dados de hoje.</p> : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%" cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
-        ))}
+        </div>
+
+        {/* Line Chart: Trends */}
+        <div className="glass rounded-3xl p-6 shadow-lg h-72 flex flex-col">
+          <h3 className="text-sm font-black text-foreground mb-2 flex items-center gap-2">
+            <TrendingUp size={18} className="text-primary" /> Tendências (Últimos Dias)
+          </h3>
+          <div className="flex-1 w-full relative">
+            {dashboard.trendData.length === 0 ? <p className="text-xs text-muted-foreground m-auto absolute inset-0 flex items-center justify-center">Sem dados recentes.</p> : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={dashboard.trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
+                  <RechartsTooltip content={<CustomTooltip />} />
+                  <Line type="monotone" name="Saídas" dataKey="saidas" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" name="Ocorrências" dataKey="ocorrencias" stroke="hsl(var(--destructive))" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Behavior Chart */}
-      <div className="glass rounded-3xl shadow-lg overflow-hidden">
-        <div className="bg-secondary/50 p-5 border-b border-border flex items-center gap-2.5">
-          <Activity size={18} className="text-primary" />
-          <h3 className="font-black text-sm text-foreground">Mapeamento de Comportamento</h3>
-        </div>
-        <div className="p-6 space-y-6">
-          <div>
-            <h4 className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-4">Ocorrências Mais Frequentes</h4>
-            <div className="space-y-4">
-              {dashboard.occArr.length === 0 ? <p className="text-xs text-muted-foreground">Sem dados.</p> :
-                dashboard.occArr.map((occ, idx) => (
-                  <div key={idx} className="relative group">
-                    <div className="flex justify-between text-xs font-bold text-foreground mb-1.5">
-                      <span>{occ.name}</span>
-                      <span className="text-muted-foreground group-hover:text-destructive transition-colors">{occ.count}</span>
-                    </div>
-                    <div className="w-full bg-secondary rounded-full h-2.5 overflow-hidden">
-                      <div className="bg-destructive h-full rounded-full transition-all duration-1000" style={{ width: `${(occ.count / dashboard.maxOcc) * 100}%` }} />
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
+      {/* Behavior Chart (Top Turmas replaced with Recharts BarChart) */}
+      <div className="glass rounded-3xl p-6 shadow-lg h-80 flex flex-col">
+        <h3 className="text-sm font-black text-foreground mb-6 flex items-center gap-2">
+          <BarChart3 size={18} className="text-primary" /> Ocorrências por Turma (Top 5)
+        </h3>
+        <div className="flex-1 w-full relative">
+          {dashboard.turmaArr.length === 0 ? <p className="text-xs text-muted-foreground m-auto absolute inset-0 flex items-center justify-center">Sem dados.</p> : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dashboard.turmaArr} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="turma" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--secondary))' }} />
+                <Bar dataKey="count" name="Ocorrências" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
@@ -174,23 +247,8 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
         </div>
       </div>
 
-      {/* Top Turmas Chart */}
-      <div className="glass rounded-3xl p-6 shadow-lg">
-        <h3 className="text-sm font-black text-foreground mb-6 flex items-center gap-2"><BarChart3 size={18} className="text-primary" /> Top 5 Turmas</h3>
-        <div className="flex items-end justify-around gap-2.5 h-36 pt-4 border-b-2 border-border">
-          {dashboard.turmaArr.length === 0 ? <p className="text-xs text-muted-foreground m-auto">Sem dados.</p> :
-            dashboard.turmaArr.map(t => (
-              <div key={t.turma} className="flex flex-col items-center w-full group relative">
-                <span className="absolute -top-8 text-[11px] font-black text-primary opacity-0 group-hover:opacity-100 transition-all bg-primary/10 px-2 py-1 rounded-lg">{t.count}</span>
-                <div className="w-full max-w-[40px] bg-primary rounded-t-xl hover:opacity-80 transition-opacity shadow-sm" style={{ height: `${Math.max((t.count / dashboard.maxTurma) * 100, 8)}%` }} />
-                <span className="text-[11px] font-extrabold mt-3 text-muted-foreground tracking-widest">{t.turma}</span>
-              </div>
-            ))}
-        </div>
-      </div>
-
       {/* Export */}
-      <div className="bg-foreground p-8 rounded-3xl text-background shadow-2xl space-y-5 relative overflow-hidden">
+      <div className="bg-foreground p-8 rounded-3xl text-background shadow-2xl space-y-5 relative overflow-hidden mt-8">
         <div className="absolute top-0 right-0 p-8 opacity-5"><DatabaseBackup size={150} /></div>
         <h3 className="text-sm font-black flex items-center gap-2.5 text-primary relative z-10"><FileSpreadsheet size={20} /> Extração de Dados</h3>
         <div className="space-y-4 relative z-10">

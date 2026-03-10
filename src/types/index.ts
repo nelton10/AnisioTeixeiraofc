@@ -72,7 +72,7 @@ export interface Aviso {
 export interface AppConfig {
   autoBlocks: { start: string; end: string; label: string }[];
   exitLimitMinutes: number;
-  passwords: { admin: string; professor: string; apoio: string };
+  passwords: { admin: string; professor: string; apoio: string; parent?: string };
 }
 
 export type UserRole = 'admin' | 'professor' | 'aluno' | 'parent';
@@ -81,4 +81,5 @@ export interface AuthState {
   isAuthenticated: boolean;
   username: string;
   role: UserRole;
+  linkedStudentName?: string;
 }
