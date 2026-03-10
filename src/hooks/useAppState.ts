@@ -24,6 +24,19 @@ const playDing = () => {
   } catch (e) { }
 };
 
+const sendNativeNotification = (title: string, body: string) => {
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "granted") {
+    new Notification(title, { body, icon: '/favicon.ico' });
+  } else if (Notification.permission !== "denied") {
+    Notification.requestPermission().then(permission => {
+      if (permission === "granted") {
+        new Notification(title, { body, icon: '/favicon.ico' });
+      }
+    });
+  }
+};
+
 export function useAppState() {
   const [authState, setAuthState] = useState<AuthState>({ isAuthenticated: false, username: '', role: 'professor' });
   const [alunos, setAlunos] = useState<Aluno[]>([]);
@@ -99,6 +112,7 @@ export function useAppState() {
             description: `${row.alunoNome || 'Aluno'} - ${row.detalhe}`,
             duration: 5000,
           });
+          sendNativeNotification(`Novo registro: ${row.categoria.toUpperCase()}`, `${row.alunoNome || 'Aluno'} - ${row.detalhe}`);
         }
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'avisos' }, (payload) => {
@@ -109,6 +123,7 @@ export function useAppState() {
           description: row.texto,
           duration: 8000,
         });
+        sendNativeNotification('📣 NOVO AVISO DA GESTÃO', row.texto);
       })
       .on('postgres_changes', { event: '*', schema: 'public' }, () => {
         refreshData();
@@ -153,6 +168,12 @@ export function useAppState() {
 
     setAuthState({ isAuthenticated: true, username, role, linkedStudentName });
     if (rememberMe) store.saveAuth(role, username, linkedStudentName);
+
+    // Solicitar permissão de notificação no login se ainda for a padrão
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+
     return true;
   }, [config.passwords, notify]);
 

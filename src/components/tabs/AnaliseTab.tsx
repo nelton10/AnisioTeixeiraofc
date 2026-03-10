@@ -127,20 +127,57 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
   }, [filteredHistory]);
 
   const downloadReport = () => {
-    const cats = ['ocorrencia', 'merito', 'saida', 'atraso', 'coordenação'];
     if (!records.length) return;
     let xml = `<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="h"><Font ss:Bold="1"/></Style></Styles>`;
-    const toGen = tipoExport === 'todos' ? cats : [tipoExport];
-    toGen.forEach(c => {
-      const ds = filteredHistory.filter(r => r.categoria === c);
-      xml += `<Worksheet ss:Name="${c.toUpperCase().slice(0, 31)}"><Table><Row ss:StyleID="h"><Cell><Data ss:Type="String">DATA</Data></Cell><Cell><Data ss:Type="String">TURMA</Data></Cell><Cell><Data ss:Type="String">NOME</Data></Cell><Cell><Data ss:Type="String">DESCRIÇÃO</Data></Cell></Row>`;
-      ds.forEach(r => xml += `<Row><Cell><Data ss:Type="String">${r.timestamp}</Data></Cell><Cell><Data ss:Type="String">${r.turma || ""}</Data></Cell><Cell><Data ss:Type="String">${r.alunoNome || ""}</Data></Cell><Cell><Data ss:Type="String">${r.detalhe || ""}</Data></Cell></Row>`);
+
+    if (tipoExport === 'fechamento_mensal') {
+      const summaryByMonth: Record<string, { ocorrencias: number, meritos: number, atrasos: number, saidas: number }> = {};
+      filteredHistory.forEach(r => {
+        if (!r.rawTimestamp) return;
+        const d = new Date(r.rawTimestamp);
+        const monthYear = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        if (!summaryByMonth[monthYear]) summaryByMonth[monthYear] = { ocorrencias: 0, meritos: 0, atrasos: 0, saidas: 0 };
+        if (r.categoria === 'ocorrencia') summaryByMonth[monthYear].ocorrencias++;
+        if (r.categoria === 'merito') summaryByMonth[monthYear].meritos++;
+        if (r.categoria === 'atraso') summaryByMonth[monthYear].atrasos++;
+        if (r.categoria === 'saida') summaryByMonth[monthYear].saidas++;
+      });
+      xml += `<Worksheet ss:Name="Fechamento Mensal"><Table><Row ss:StyleID="h"><Cell><Data ss:Type="String">MES</Data></Cell><Cell><Data ss:Type="String">OCORRENCIAS</Data></Cell><Cell><Data ss:Type="String">MERITOS</Data></Cell><Cell><Data ss:Type="String">ATRASOS</Data></Cell><Cell><Data ss:Type="String">SAIDAS</Data></Cell></Row>`;
+      Object.entries(summaryByMonth).sort().forEach(([month, counts]) => {
+        xml += `<Row><Cell><Data ss:Type="String">${month}</Data></Cell><Cell><Data ss:Type="Number">${counts.ocorrencias}</Data></Cell><Cell><Data ss:Type="Number">${counts.meritos}</Data></Cell><Cell><Data ss:Type="Number">${counts.atrasos}</Data></Cell><Cell><Data ss:Type="Number">${counts.saidas}</Data></Cell></Row>`;
+      });
       xml += `</Table></Worksheet>`;
-    });
+    } else if (tipoExport === 'lote_turma') {
+      const summaryByAluno: Record<string, { turma: string, ocorrencias: number, meritos: number, atrasos: number, saidas: number }> = {};
+      filteredHistory.forEach(r => {
+        const nome = r.alunoNome || 'Desconhecido';
+        if (!summaryByAluno[nome]) summaryByAluno[nome] = { turma: r.turma || '', ocorrencias: 0, meritos: 0, atrasos: 0, saidas: 0 };
+        if (r.categoria === 'ocorrencia') summaryByAluno[nome].ocorrencias++;
+        if (r.categoria === 'merito') summaryByAluno[nome].meritos++;
+        if (r.categoria === 'atraso') summaryByAluno[nome].atrasos++;
+        if (r.categoria === 'saida') summaryByAluno[nome].saidas++;
+      });
+      const sheetName = selectedTurma ? `Consolidado ${selectedTurma}` : 'Consolidado';
+      xml += `<Worksheet ss:Name="${sheetName.slice(0, 31)}"><Table><Row ss:StyleID="h"><Cell><Data ss:Type="String">NOME</Data></Cell><Cell><Data ss:Type="String">TURMA</Data></Cell><Cell><Data ss:Type="String">OCORRENCIAS</Data></Cell><Cell><Data ss:Type="String">MERITOS</Data></Cell><Cell><Data ss:Type="String">ATRASOS</Data></Cell><Cell><Data ss:Type="String">SAIDAS</Data></Cell></Row>`;
+      Object.entries(summaryByAluno).sort((a, b) => a[0].localeCompare(b[0])).forEach(([nome, counts]) => {
+        xml += `<Row><Cell><Data ss:Type="String">${nome.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</Data></Cell><Cell><Data ss:Type="String">${counts.turma}</Data></Cell><Cell><Data ss:Type="Number">${counts.ocorrencias}</Data></Cell><Cell><Data ss:Type="Number">${counts.meritos}</Data></Cell><Cell><Data ss:Type="Number">${counts.atrasos}</Data></Cell><Cell><Data ss:Type="Number">${counts.saidas}</Data></Cell></Row>`;
+      });
+      xml += `</Table></Worksheet>`;
+    } else {
+      const cats = ['ocorrencia', 'merito', 'saida', 'atraso', 'coordenação'];
+      const toGen = tipoExport === 'todos' ? cats : [tipoExport];
+      toGen.forEach(c => {
+        const ds = filteredHistory.filter(r => r.categoria === c);
+        xml += `<Worksheet ss:Name="${c.toUpperCase().slice(0, 31)}"><Table><Row ss:StyleID="h"><Cell><Data ss:Type="String">DATA</Data></Cell><Cell><Data ss:Type="String">TURMA</Data></Cell><Cell><Data ss:Type="String">NOME</Data></Cell><Cell><Data ss:Type="String">DESCRICAO</Data></Cell></Row>`;
+        ds.forEach(r => xml += `<Row><Cell><Data ss:Type="String">${r.timestamp}</Data></Cell><Cell><Data ss:Type="String">${r.turma || ""}</Data></Cell><Cell><Data ss:Type="String">${(r.alunoNome || "").replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</Data></Cell><Cell><Data ss:Type="String">${(r.detalhe || "").replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</Data></Cell></Row>`);
+        xml += `</Table></Worksheet>`;
+      });
+    }
+
     xml += `</Workbook>`;
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([xml], { type: 'application/vnd.ms-excel' }));
-    link.download = `Relatorio_Anisio.xls`;
+    link.download = `Relatorio_${tipoExport}.xls`;
     link.click();
   };
 
@@ -360,6 +397,8 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
         <div className="space-y-4 relative z-10">
           <select className="w-full bg-background/10 text-background border border-background/20 p-4 rounded-2xl text-sm font-bold outline-none appearance-none" value={tipoExport} onChange={e => setTipoExport(e.target.value)}>
             <option value="todos">Relatório Completo</option>
+            <option value="fechamento_mensal">Fechamento Mensal (Escola)</option>
+            <option value="lote_turma">Boletins da Turma / Lote</option>
             <option value="ocorrencia">Apenas Ocorrências</option>
             <option value="saida">Apenas Saídas</option>
             <option value="atraso">Apenas Entradas Tardias</option>
