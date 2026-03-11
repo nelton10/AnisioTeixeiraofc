@@ -32,7 +32,7 @@ const SaidasTab: React.FC<SaidasTabProps> = ({
   const [authReturnModal, setAuthReturnModal] = useState<{ exit: ActiveExit; isDemorou: boolean } | null>(null);
   const [authReturnPassword, setAuthReturnPassword] = useState('');
 
-  const locaisSaida = ["Banheiro", "Bebedouro", "Secretaria", "Coordenação", "Biblioteca", "Enfermaria"];
+  const locaisSaida = ["Banheiro", "Bebedouro", "Secretaria", "Coordenação", "Biblioteca", "outros"];
   const suspendedInTurma = suspensions.filter(s => s.turma === selectedTurma);
 
   const finalizeExit = async (exit: ActiveExit, registerOccurrence: boolean, elapsedMins = 0) => {
