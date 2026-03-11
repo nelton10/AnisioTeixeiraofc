@@ -25,6 +25,8 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
   const [filtroCategoria, setFiltroCategoria] = useState('ocorrencia');
   const [filtroTurma, setFiltroTurma] = useState('');
   const [filtroBuscaNome, setFiltroBuscaNome] = useState('');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
 
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, nome: string, type: 'history' | 'library' } | null>(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
@@ -53,14 +55,60 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
     return [...r, ...l].sort((a, b) => (b.rawTimestamp || 0) - (a.rawTimestamp || 0));
   }, [records, libraryQueue]);
 
+  const parseDateString = (dateStr: string) => {
+    if (!dateStr) return 0;
+    const str = dateStr.split(' - ')[0] || dateStr.split(' ')[0] || dateStr;
+    const parts = str.split('/');
+    if (parts.length === 3) return new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00`).getTime();
+    const dObj = new Date(str);
+    return isNaN(dObj.getTime()) ? 0 : dObj.getTime();
+  };
+
+  const formatHoraFortaleza = (tsString: string) => {
+    if (!tsString) return '';
+    try {
+      const match = tsString.match(/(\d{2}):(\d{2})/);
+      if (!tsString.includes('T') && match) return `${match[1]}:${match[2]}`;
+      const d = new Date(tsString);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleTimeString('pt-BR', { timeZone: 'America/Fortaleza', hour: '2-digit', minute: '2-digit' });
+      }
+      if (match) return `${match[1]}:${match[2]}`;
+    } catch (e) { }
+    return '';
+  };
+
+  const formatDataLista = (tsString: string) => {
+    if (!tsString) return '';
+    try {
+      if (tsString.includes(' - ')) return tsString.split(' - ')[0];
+      const d = new Date(tsString);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' });
+      }
+    } catch (e) { }
+    return tsString.split('T')[0] || tsString;
+  };
+
   const filtered = useMemo(() => {
     return allMergedRecords.filter(r => {
       if (filtroCategoria && r.categoria !== filtroCategoria) return false;
       if (filtroTurma && r.turma !== filtroTurma) return false;
       if (filtroBuscaNome && !r.alunoNome?.toLowerCase().includes(filtroBuscaNome.toLowerCase())) return false;
+
+      const recordTime = parseDateString(r.timestamp);
+      if (dataInicio && recordTime > 0) {
+        const start = new Date(`${dataInicio}T00:00:00`).getTime();
+        if (recordTime < start) return false;
+      }
+      if (dataFim && recordTime > 0) {
+        const end = new Date(`${dataFim}T23:59:59`).getTime();
+        if (recordTime > end) return false;
+      }
+
       return true;
     });
-  }, [allMergedRecords, filtroCategoria, filtroTurma, filtroBuscaNome]);
+  }, [allMergedRecords, filtroCategoria, filtroTurma, filtroBuscaNome, dataInicio, dataFim]);
 
   const toggleSelect = (id: string, type: 'history' | 'library') => {
     setSelectedIds(prev => {
@@ -188,7 +236,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
             </button>
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <select className="bg-secondary border border-border rounded-2xl p-3 text-xs font-bold outline-none text-foreground appearance-none"
             value={filtroTurma} onChange={e => setFiltroTurma(e.target.value)}>
             <option value="">Todas Turmas</option>
@@ -196,6 +244,10 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
           </select>
           <input type="text" placeholder="Buscar nome..." className="bg-secondary border border-border rounded-2xl p-3 text-xs font-medium outline-none text-foreground"
             value={filtroBuscaNome} onChange={e => setFiltroBuscaNome(e.target.value)} />
+          <input type="date" title="Data Inicial" className="bg-secondary border border-border rounded-2xl p-3 text-xs font-bold outline-none text-foreground"
+            value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
+          <input type="date" title="Data Final" className="bg-secondary border border-border rounded-2xl p-3 text-xs font-bold outline-none text-foreground"
+            value={dataFim} onChange={e => setDataFim(e.target.value)} />
         </div>
       </div>
 
@@ -225,7 +277,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
                 <p className="text-xs text-muted-foreground font-medium mb-2 leading-relaxed whitespace-pre-wrap">{r.detalhe}</p>
 
                 <div className="flex justify-between items-center mt-3">
-                  <span className="text-[10px] text-muted-foreground">{r.timestamp} • {r.professor}</span>
+                  <span className="text-[10px] text-muted-foreground">{formatDataLista(r.timestamp)} • {formatHoraFortaleza(r.timestamp)}h • {r.professor}</span>
                   <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     {r.fotoUrl && <button onClick={() => setFotoViewer(r.fotoUrl!)} className="text-primary p-1"><Camera size={14} /></button>}
                     {userRole === 'admin' && (
