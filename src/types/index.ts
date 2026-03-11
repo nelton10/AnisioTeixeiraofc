@@ -19,6 +19,15 @@ export interface ActiveExit {
   isEmergency: boolean;
 }
 
+export interface SaidasQueueItem {
+  id: string;
+  alunoId: string;
+  alunoNome: string;
+  turma: string;
+  destino: string;
+  timestamp: number;
+}
+
 export interface HistoryRecord {
   id: string;
   alunoId: string;

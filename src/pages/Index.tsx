@@ -65,7 +65,9 @@ const Index = () => {
           <>
             {state.activeTab === 'saidas' && (
               <SaidasTab
-                alunos={state.alunos} activeExits={state.activeExits} config={state.config}
+                alunos={state.alunos} activeExits={state.activeExits} saidasQueue={state.saidasQueue}
+                addToSaidasQueue={state.addToSaidasQueue} removeFromSaidasQueue={state.removeFromSaidasQueue}
+                config={state.config}
                 suspensions={state.suspensions} avisos={state.avisos} turmasExistentes={state.turmasExistentes}
                 userRole={state.authState.role} username={state.authState.username}
                 activeBlock={state.activeBlock} getTodayExitsCount={state.getTodayExitsCount}

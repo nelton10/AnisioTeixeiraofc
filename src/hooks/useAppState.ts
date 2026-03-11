@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   Aluno, ActiveExit, HistoryRecord, CoordinationItem, LibraryItem,
-  Suspension, Aviso, AppConfig, UserRole, AuthState
+  Suspension, Aviso, AppConfig, UserRole, AuthState, SaidasQueueItem
 } from '@/types';
 import * as store from '@/lib/store';
 import { toast } from 'sonner';
@@ -41,6 +41,13 @@ export function useAppState() {
   const [authState, setAuthState] = useState<AuthState>({ isAuthenticated: false, username: '', role: 'professor' });
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [activeExits, setActiveExits] = useState<ActiveExit[]>([]);
+  const [saidasQueue, setSaidasQueue] = useState<SaidasQueueItem[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('anisio_saidas_queue') || '[]');
+    } catch {
+      return [];
+    }
+  });
   const [records, setRecords] = useState<HistoryRecord[]>([]);
   const [coordinationQueue, setCoordinationQueue] = useState<CoordinationItem[]>([]);
   const [libraryQueue, setLibraryQueue] = useState<LibraryItem[]>([]);
@@ -145,6 +152,10 @@ export function useAppState() {
     return () => clearInterval(int);
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem('anisio_saidas_queue', JSON.stringify(saidasQueue));
+  }, [saidasQueue]);
+
   const notify = useCallback((msg: string) => {
     setShowToast(msg);
     setTimeout(() => setShowToast(null), 3000);
@@ -221,10 +232,19 @@ export function useAppState() {
     };
   }, [records]);
 
+  const addToSaidasQueue = useCallback((item: SaidasQueueItem) => {
+    setSaidasQueue(prev => [...prev, item]);
+  }, []);
+
+  const removeFromSaidasQueue = useCallback((id: string) => {
+    setSaidasQueue(prev => prev.filter(q => q.id !== id));
+  }, []);
+
   return {
-    authState, alunos, activeExits, records, coordinationQueue, libraryQueue,
+    authState, alunos, activeExits, saidasQueue, records, coordinationQueue, libraryQueue,
     suspensions, avisos, config, activeTab, showToast, currentTimeStr, isLoading,
     turmasExistentes, activeBlock, statsSummary,
     setActiveTab, notify, login, logout, refreshData, getTodayExitsCount, saveConfig,
+    addToSaidasQueue, removeFromSaidasQueue,
   };
 }

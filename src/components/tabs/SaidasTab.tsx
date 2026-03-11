@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { UserCheck, Lock, ArrowRight, Clock, User, Check, AlertTriangle, Megaphone, Trash2, AlertOctagon, Gavel } from 'lucide-react';
 import LiveTimer from '@/components/LiveTimer';
 import * as store from '@/lib/store';
-import { ActiveExit, Aluno, AppConfig, Aviso, Suspension, UserRole } from '@/types';
+import { ActiveExit, Aluno, AppConfig, Aviso, Suspension, UserRole, SaidasQueueItem } from '@/types';
 
 interface SaidasTabProps {
   alunos: Aluno[];
   activeExits: ActiveExit[];
+  saidasQueue: SaidasQueueItem[];
+  addToSaidasQueue: (item: SaidasQueueItem) => void;
+  removeFromSaidasQueue: (id: string) => void;
   config: AppConfig;
   suspensions: Suspension[];
   avisos: Aviso[];
@@ -20,7 +23,7 @@ interface SaidasTabProps {
 }
 
 const SaidasTab: React.FC<SaidasTabProps> = ({
-  alunos, activeExits, config, suspensions, avisos, turmasExistentes,
+  alunos, activeExits, saidasQueue, addToSaidasQueue, removeFromSaidasQueue, config, suspensions, avisos, turmasExistentes,
   userRole, username, activeBlock, getTodayExitsCount, notify, refreshData
 }) => {
   const [selectedTurma, setSelectedTurma] = useState('');
@@ -119,6 +122,22 @@ const SaidasTab: React.FC<SaidasTabProps> = ({
       console.error("HandleNewExit Error:", err);
       notify("Erro ao autorizar saída: " + err.message);
     }
+  };
+
+  const handleAddToQueue = () => {
+    const a = alunos.find(x => x.id === selectedAlunoId);
+    if (!a) return notify("Selecione um aluno.");
+    addToSaidasQueue({
+      id: store.generateId(),
+      alunoId: a.id,
+      alunoNome: a.nome,
+      turma: a.turma,
+      destino: destinoSaida,
+      timestamp: Date.now()
+    });
+    setSelectedAlunoId('');
+    setIsEmergencyMode(false);
+    notify("Adicionado à fila de espera!");
   };
 
 
@@ -231,13 +250,65 @@ const SaidasTab: React.FC<SaidasTabProps> = ({
           ))}
         </div>
 
-        <button onClick={handleNewExit}
-          className={`w-full py-4 rounded-2xl font-bold shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed
-          ${activeBlock && isEmergencyMode ? 'bg-destructive text-destructive-foreground' : 'bg-primary text-primary-foreground'}`}
-          disabled={!selectedAlunoId || (!!activeBlock && !isEmergencyMode)}>
-          {activeBlock && isEmergencyMode ? 'CONFIRMAR EMERGÊNCIA' : 'CONFIRMAR SAÍDA'} <ArrowRight size={18} />
-        </button>
+        <div className="flex gap-2.5 mt-2">
+          <button onClick={handleAddToQueue}
+            className={`flex-1 py-4 rounded-2xl font-bold shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed bg-yellow-500 hover:bg-yellow-600 text-white`}
+            disabled={!selectedAlunoId || (!!activeBlock && !isEmergencyMode)}>
+            <Clock size={18} /> FILA
+          </button>
+          <button onClick={handleNewExit}
+            className={`flex-[2] py-4 rounded-2xl font-bold shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed
+            ${activeBlock && isEmergencyMode ? 'bg-destructive text-destructive-foreground' : 'bg-primary text-primary-foreground'}`}
+            disabled={!selectedAlunoId || (!!activeBlock && !isEmergencyMode)}>
+            {activeBlock && isEmergencyMode ? 'EMERGÊNCIA' : 'AUTORIZAR'} <ArrowRight size={18} />
+          </button>
+        </div>
       </div>
+
+      {/* Waitlist Queue */}
+      {saidasQueue.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-black flex items-center gap-2 text-yellow-600 dark:text-yellow-500 tracking-tight"><Clock size={18} strokeWidth={2.5} /> Fila de Espera ({saidasQueue.length})</h3>
+          {saidasQueue.map(q => (
+            <div key={q.id} className="glass rounded-2xl p-4 flex justify-between items-center shadow-sm hover:shadow-md transition-all group border-l-4 border-l-yellow-500">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <Clock size={20} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-sm leading-tight text-foreground tracking-tight">{q.alunoNome}</h4>
+                  <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="bg-secondary text-muted-foreground px-1.5 py-0.5 rounded-md">{q.turma}</span> • {q.destino}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-1.5">
+                <button onClick={async () => {
+                  try {
+                    await store.addActiveExit({
+                      id: store.generateId(), alunoId: q.alunoId, alunoNome: q.alunoNome, turma: q.turma,
+                      destino: q.destino, startTime: Date.now(), professor: username,
+                      autorRole: userRole, isEmergency: false
+                    });
+                    removeFromSaidasQueue(q.id);
+                    await refreshData();
+                    notify("Saída Autorizada a partir da fila!");
+                  } catch(e: any) {
+                    notify("Erro: " + e.message);
+                  }
+                }}
+                  className="bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-primary/20 active:scale-95 transition-all flex items-center gap-1">
+                  <Check size={12} strokeWidth={3} /> Autorizar
+                </button>
+                <button onClick={() => removeFromSaidasQueue(q.id)}
+                  className="bg-destructive/10 text-destructive hover:bg-destructive/20 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-destructive/20 active:scale-95 transition-all flex items-center justify-center">
+                  <Trash2 size={12} strokeWidth={3} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Active Exits List */}
       <div className="space-y-3">
