@@ -229,6 +229,7 @@ export function useAppState() {
       totalOcors: todayRecs.filter(r => r.categoria === 'ocorrencia').length,
       totalAtrasos: todayRecs.filter(r => r.categoria === 'atraso').length,
       totalMeritos: todayRecs.filter(r => r.categoria === 'merito').length,
+      totalAvaliacoes: todayRecs.filter(r => r.categoria === 'avaliacao_aula').length,
     };
   }, [records]);
 

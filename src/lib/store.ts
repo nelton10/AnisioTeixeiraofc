@@ -238,7 +238,7 @@ export async function getHistory(): Promise<HistoryRecord[]> {
 }
 
 export async function addHistoryRecord(record: HistoryRecord) {
-  const dbRecord = { id: record.id, aluno_id: record.alunoId, aluno_nome: record.alunoNome, turma: record.turma, categoria: record.categoria, detalhe: record.detalhe, raw_timestamp: record.rawTimestamp, professor: record.professor, autor_role: record.autorRole, foto_url: record.fotoUrl };
+  const dbRecord = { id: record.id, aluno_id: record.alunoId, aluno_nome: record.alunoNome, turma: record.turma, categoria: record.categoria, detalhe: record.detalhe, timestamp: record.timestamp, raw_timestamp: record.rawTimestamp, professor: record.professor, autor_role: record.autorRole, foto_url: record.fotoUrl };
   await executeMutation(
     { table: 'history', action: 'insert', payload: [dbRecord] },
     () => handleResponse(supabase.from('history').insert([dbRecord]), 'addHistoryRecord')

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { History, Trash2, Edit, Camera, X, CheckSquare, Square } from 'lucide-react';
+import { History, Trash2, Edit, Camera, X, CheckSquare, Square, Star } from 'lucide-react';
 import * as store from '@/lib/store';
 import { HistoryRecord, LibraryItem, UserRole } from '@/types';
 
@@ -19,6 +19,7 @@ const categoriaColors: Record<string, string> = {
   atraso: 'bg-warning/10 text-warning border-warning/20 bg-warning/5',
   'coordenação': 'bg-purple-500/10 text-purple-500 border-purple-500/20 bg-purple-500/5',
   medida: 'bg-orange-500/10 text-orange-500 border-orange-500/20 bg-orange-500/5',
+  avaliacao_aula: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20 bg-indigo-500/5',
 };
 
 const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turmasExistentes, userRole, notify, refreshData }) => {
@@ -228,11 +229,11 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
       <div className="glass rounded-3xl p-6 shadow-lg space-y-4">
         <h3 className="text-sm font-black flex items-center gap-2 text-foreground"><History size={18} className="text-primary" /> Histórico de Registos</h3>
         <div className="flex flex-wrap gap-2">
-          {['ocorrencia', 'medida', 'merito', 'saida', 'atraso', 'coordenação'].map(c => (
+          {['ocorrencia', 'medida', 'merito', 'saida', 'atraso', 'coordenação', 'avaliacao_aula'].map(c => (
             <button key={c} onClick={() => setFiltroCategoria(filtroCategoria === c ? '' : c)}
               className={`px-3 py-2 rounded-xl text-[10px] font-extrabold uppercase tracking-wider border transition-all
               ${filtroCategoria === c ? categoriaColors[c] + ' shadow-sm' : 'bg-secondary text-muted-foreground border-border hover:bg-muted'}`}>
-              {c}
+              {c === 'avaliacao_aula' ? 'Avaliação' : c}
             </button>
           ))}
         </div>
@@ -272,9 +273,27 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
                     <span className="font-extrabold text-sm text-foreground truncate pr-2">{r.alunoNome}</span>
                     <span className="text-[10px] font-bold text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">{r.turma}</span>
                   </div>
-                  <span className={`text-[9px] font-extrabold uppercase px-2 py-1 rounded-lg border shrink-0 ${categoriaColors[r.categoria] || 'bg-secondary text-foreground border-border'}`}>{r.categoria}</span>
+                  <span className={`text-[9px] font-extrabold uppercase px-2 py-1 rounded-lg border shrink-0 ${categoriaColors[r.categoria] || 'bg-secondary text-foreground border-border'}`}>{r.categoria === 'avaliacao_aula' ? 'Avaliação' : r.categoria}</span>
                 </div>
-                <p className="text-xs text-muted-foreground font-medium mb-2 leading-relaxed whitespace-pre-wrap">{r.detalhe}</p>
+                {r.categoria === 'avaliacao_aula' ? (() => {
+                  try {
+                    const data = JSON.parse(r.detalhe);
+                    return (
+                      <div className="space-y-1.5">
+                        <div className="flex gap-0.5">
+                          {[1, 2, 3, 4, 5].map(s => (
+                            <Star key={s} size={12} fill={s <= data.stars ? 'currentColor' : 'none'} className={s <= data.stars ? 'text-warning' : 'text-muted-foreground/30'} />
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground font-medium leading-relaxed italic">"{data.comment}"</p>
+                      </div>
+                    );
+                  } catch {
+                    return <p className="text-xs text-muted-foreground font-medium mb-2 leading-relaxed whitespace-pre-wrap">{r.detalhe}</p>;
+                  }
+                })() : (
+                  <p className="text-xs text-muted-foreground font-medium mb-2 leading-relaxed whitespace-pre-wrap">{r.detalhe}</p>
+                )}
 
                 <div className="flex justify-between items-center mt-3">
                   <span className="text-[10px] text-muted-foreground">{formatDataLista(r.timestamp)} • {formatHoraFortaleza(r.timestamp)}h • {r.professor}</span>

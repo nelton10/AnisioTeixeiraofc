@@ -9,7 +9,7 @@ import {
 interface AnaliseTabProps {
   records: HistoryRecord[];
   turmasExistentes: string[];
-  statsSummary: { totalSaidas: number; totalOcors: number; totalAtrasos: number; totalMeritos: number };
+  statsSummary: { totalSaidas: number; totalOcors: number; totalAtrasos: number; totalMeritos: number; totalAvaliacoes: number };
 }
 
 // Custom tooltip for styled Recharts tooltips
@@ -164,7 +164,7 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
       });
       xml += `</Table></Worksheet>`;
     } else {
-      const cats = ['ocorrencia', 'merito', 'saida', 'atraso', 'coordenação'];
+      const cats = ['ocorrencia', 'merito', 'saida', 'atraso', 'coordenação', 'avaliacao_aula'];
       const toGen = tipoExport === 'todos' ? cats : [tipoExport];
       toGen.forEach(c => {
         const ds = filteredHistory.filter(r => r.categoria === c);
@@ -192,6 +192,7 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
     { name: 'Ocorrências', value: statsSummary.totalOcors, color: 'hsl(var(--destructive))' },
     { name: 'Atrasos', value: statsSummary.totalAtrasos, color: 'hsl(var(--warning))' },
     { name: 'Méritos', value: statsSummary.totalMeritos, color: 'hsl(var(--accent))' },
+    { name: 'Avaliações', value: statsSummary.totalAvaliacoes, color: 'hsl(var(--indigo-500))' },
   ].filter(d => d.value > 0);
 
   return (

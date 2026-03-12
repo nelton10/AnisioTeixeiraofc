@@ -51,7 +51,7 @@ const AnaliseAulaTab: React.FC<AnaliseAulaTabProps> = ({ records, turmasExistent
                 turma: selectedTurma,
                 categoria: 'avaliacao_aula',
                 detalhe: JSON.stringify({ stars, comment }),
-                timestamp: now.toLocaleString('pt-PT'),
+                timestamp: now.toLocaleString('pt-BR'),
                 rawTimestamp: now.getTime(),
                 professor: username,
                 autorRole: userRole
