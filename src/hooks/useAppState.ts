@@ -268,7 +268,7 @@ export function useAppState() {
     authState, alunos, activeExits, saidasQueue, records, coordinationQueue, libraryQueue,
     suspensions, avisos, config, activeTab, showToast, currentTimeStr, isLoading,
     turmasExistentes, activeBlock, statsSummary,
-    setActiveTab, notify, login, logout, refreshData, getTodayExitsCount, saveConfig,
+    setActiveTab, notify, login, logout, refreshData, refreshHistory, getTodayExitsCount, saveConfig,
     addToSaidasQueue, removeFromSaidasQueue,
   };
 }

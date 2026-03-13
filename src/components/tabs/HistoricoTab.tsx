@@ -262,20 +262,26 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
             </button>
           ))}
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <select className="bg-secondary border border-border rounded-2xl p-3 text-xs font-bold outline-none text-foreground appearance-none"
-            value={filtroTurma} onChange={e => setFiltroTurma(e.target.value)}>
-            <option value="">Todas Turmas</option>
-            {turmasExistentes.map(t => <option key={t}>{t}</option>)}
-          </select>
-          <input type="text" placeholder="Buscar nome..." className="bg-secondary border border-border rounded-2xl p-3 text-xs font-medium outline-none text-foreground"
-            value={filtroBuscaNome} onChange={e => setFiltroBuscaNome(e.target.value)} />
-          <input type="date" title="Data Inicial" className="bg-secondary border border-border rounded-2xl p-3 text-xs font-bold outline-none text-foreground"
-            value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
-          <input type="date" title="Data Final" className="bg-secondary border border-border rounded-2xl p-3 text-xs font-bold outline-none text-foreground"
-            value={dataFim} onChange={e => setDataFim(e.target.value)} />
+          <div className="flex flex-col gap-2">
+            <span className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-1.5">
+              <History size={12} /> Intervalo (Vazio = Últimas 12h)
+            </span>
+            <div className="flex items-center gap-2">
+              <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)}
+                className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/20 text-foreground" />
+              <span className="text-muted-foreground">/</span>
+              <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)}
+                className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/20 text-foreground" />
+              <button 
+                onClick={handleSearchDatabase}
+                className="bg-primary text-primary-foreground p-2 rounded-xl hover:opacity-90 active:scale-95 transition-all shadow-md"
+                title="Buscar registros mais antigos no banco"
+              >
+                <History size={16} />
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
 
       {/* Records List */}
       <div className="space-y-3">
