@@ -42,7 +42,9 @@ const SaidasTab: React.FC<SaidasTabProps> = ({
     try {
       const dur = elapsedMins > 0 ? elapsedMins : Math.floor((Date.now() - exit.startTime) / 60000);
       const now = new Date();
-      const ts = now.toLocaleString('pt-PT');
+      
+      // A CORREÇÃO ESTÁ AQUI: O banco de dados exige o formato ISO, não a string regional
+      const ts = now.toISOString(); 
       const raw = now.getTime();
 
       await store.addHistoryRecord({
@@ -68,7 +70,6 @@ const SaidasTab: React.FC<SaidasTabProps> = ({
       notify("Erro ao registar retorno: " + err.message);
     }
   };
-
 
   const handleReturnClick = async (exit: ActiveExit) => {
     const elapsedSecs = Math.floor((Date.now() - exit.startTime) / 1000);
@@ -139,7 +140,6 @@ const SaidasTab: React.FC<SaidasTabProps> = ({
     setIsEmergencyMode(false);
     notify("Adicionado à fila de espera!");
   };
-
 
   return (
     <div className="space-y-5 animate-slide-up">
@@ -353,58 +353,14 @@ const SaidasTab: React.FC<SaidasTabProps> = ({
 
           {userRole === 'admin' && (
             <div className="glass rounded-3xl p-5 shadow-lg space-y-3">
-              <textarea className="w-full p-4 bg-secondary rounded-2xl border border-border outline-none font-medium text-sm resize-none h-24 focus:bg-card focus:ring-2 focus:ring-primary/20 transition-all text-foreground"
-                placeholder="Escreva um aviso para os professores e gestão..." value={novoAvisoTexto} onChange={e => setNovoAvisoTexto(e.target.value)} />
-              <button onClick={async () => {
-                if (!novoAvisoTexto.trim()) return notify("Escreva uma mensagem.");
-                await store.addAviso({ id: store.generateId(), texto: novoAvisoTexto, autor: username, timestamp: new Date().toLocaleString('pt-PT'), rawTimestamp: Date.now() });
-                setNovoAvisoTexto('');
-                await refreshData();
-                notify("Aviso publicado!");
-              }} className="w-full py-3.5 bg-foreground text-background rounded-2xl font-bold shadow-lg active:scale-[0.98] transition-all text-xs">
-                PUBLICAR AVISO
-              </button>
+              <textarea 
+                className="w-full p-4 bg-secondary rounded-2xl border border-border outline-none font-medium text-sm resize-none h-24"
+                placeholder="Escreva um novo aviso..."
+                value={novoAvisoTexto}
+                onChange={e => setNovoAvisoTexto(e.target.value)}
+              />
             </div>
           )}
-
-          <div className="space-y-3">
-            {avisos.length === 0 && suspensions.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground font-bold bg-secondary/50 rounded-3xl border-2 border-dashed border-border text-xs">
-                Nenhum aviso importante no momento.
-              </div>
-            ) : (
-              <>
-                {suspensions.map(s => (
-                  <div key={`susp-${s.id}`} className="bg-destructive/5 p-5 rounded-2xl border border-destructive/15 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-1.5 h-full bg-destructive" />
-                    <div className="flex justify-between items-start mb-2.5 ml-2">
-                      <span className="font-extrabold text-xs text-destructive bg-destructive/10 px-2 py-1 rounded-md flex items-center gap-1.5"><Gavel size={12} /> ALUNO SUSPENSO</span>
-                      <span className="text-[10px] font-bold text-destructive/70">{s.returnDate.split('-').reverse().join('/')}</span>
-                    </div>
-                    <p className="text-sm text-foreground ml-2 font-bold">{s.alunoNome} <span className="text-xs font-semibold text-muted-foreground bg-card px-1.5 py-0.5 rounded shadow-sm">{s.turma}</span></p>
-                  </div>
-                ))}
-                {avisos.map(aviso => (
-                  <div key={aviso.id} className="glass p-5 rounded-2xl shadow-sm relative overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="absolute top-0 left-0 w-1.5 h-full bg-primary" />
-                    <div className="flex justify-between items-start mb-3 ml-2">
-                      <span className="font-extrabold text-xs text-primary bg-primary/10 px-2 py-1 rounded-md">Gestão: {aviso.autor}</span>
-                      <span className="text-[10px] font-bold text-muted-foreground">{aviso.timestamp}</span>
-                    </div>
-                    <p className="text-sm text-foreground ml-2 font-medium whitespace-pre-wrap">{aviso.texto}</p>
-                    {userRole === 'admin' && (
-                      <div className="mt-4 flex justify-end">
-                        <button onClick={async () => { await store.removeAviso(aviso.id); await refreshData(); notify("Aviso removido."); }}
-                          className="text-destructive/60 hover:text-destructive flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 bg-destructive/5 hover:bg-destructive/10 rounded-lg transition-colors">
-                          <Trash2 size={12} strokeWidth={2.5} /> Apagar
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
         </div>
       )}
     </div>
