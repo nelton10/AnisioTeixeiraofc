@@ -68,15 +68,23 @@ const CoordTab: React.FC<CoordTabProps> = ({ coordinationQueue, suspensions, avi
 
   const handleAction = async (item: CoordinationItem, type: string) => {
     const now = new Date(); const ts = now.toLocaleString('pt-PT'); const raw = now.getTime();
+    
+    // Fetch full item to get photo if it exists (for history persistence)
+    let photo = item.fotoUrl;
+    if (!photo) {
+      const full = await store.getCoordinationItemWithPhoto(item.id);
+      photo = full?.fotoUrl || null;
+    }
+
     await store.addHistoryRecord({
       id: store.generateId(), alunoId: item.alunoId, alunoNome: item.alunoNome, turma: item.turma,
       categoria: 'coordenação', detalhe: `Ação de Coordenação: ${type.toUpperCase()}. OBS: ${coordObs || 'Nenhuma'}`,
-      timestamp: ts, rawTimestamp: raw, professor: username, fotoUrl: item.fotoUrl
+      timestamp: ts, rawTimestamp: raw, professor: username, fotoUrl: photo
     });
     if (type === 'biblioteca') {
       await store.addLibraryItem({
         id: store.generateId(), alunoId: item.alunoId, alunoNome: item.alunoNome, turma: item.turma,
-        timestamp: ts, professorCoord: username, obsCoord: coordObs, fotoUrl: item.fotoUrl
+        timestamp: ts, professorCoord: username, obsCoord: coordObs, fotoUrl: photo
       });
     }
     await store.removeCoordinationItem(item.id);
@@ -86,10 +94,18 @@ const CoordTab: React.FC<CoordTabProps> = ({ coordinationQueue, suspensions, avi
   const handleSuspend = async () => {
     if (!suspensionModal || !suspensionReturnDate) return notify("Insira a data de retorno!");
     const now = new Date(); const ts = now.toLocaleString('pt-PT'); const raw = now.getTime();
+
+    // Fetch full item to get photo
+    let photo = suspensionModal.fotoUrl;
+    if (!photo) {
+      const full = await store.getCoordinationItemWithPhoto(suspensionModal.id);
+      photo = full?.fotoUrl || null;
+    }
+
     await store.addHistoryRecord({
       id: store.generateId(), alunoId: suspensionModal.alunoId, alunoNome: suspensionModal.alunoNome, turma: suspensionModal.turma,
       categoria: 'coordenação', detalhe: `SUSPENSÃO. Retorna dia: ${suspensionReturnDate.split('-').reverse().join('/')}. OBS: ${coordObs || 'Nenhuma'}`,
-      timestamp: ts, rawTimestamp: raw, professor: username, fotoUrl: suspensionModal.fotoUrl
+      timestamp: ts, rawTimestamp: raw, professor: username, fotoUrl: photo
     });
     await store.addSuspension({
       id: store.generateId(), alunoId: suspensionModal.alunoId, alunoNome: suspensionModal.alunoNome,
@@ -170,8 +186,14 @@ const CoordTab: React.FC<CoordTabProps> = ({ coordinationQueue, suspensions, avi
                 <p className="font-extrabold text-foreground text-base">{i.alunoNome}</p>
                 <span className="text-[10px] font-extrabold uppercase text-primary bg-primary/10 px-2 py-1 rounded-lg">{i.turma}</span>
               </div>
-              {i.fotoUrl && (
-                <button onClick={() => setFotoViewer(i.fotoUrl!)}
+              {i.fotoUrl !== undefined && (
+                <button onClick={async () => {
+                  if (i.fotoUrl) { setFotoViewer(i.fotoUrl); return; }
+                  notify("A carregar evidência...");
+                  const full = await store.getCoordinationItemWithPhoto(i.id);
+                  if (full?.fotoUrl) setFotoViewer(full.fotoUrl);
+                  else notify("Imagem não encontrada.");
+                }}
                   className="text-[10px] flex items-center gap-1.5 text-destructive font-bold bg-destructive/5 w-fit px-3 py-1.5 rounded-xl border border-destructive/10 hover:bg-destructive/10 transition-colors mb-3">
                   <Camera size={14} /> Ver Evidência
                 </button>

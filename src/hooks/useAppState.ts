@@ -14,7 +14,7 @@ const playDing = () => {
     const gain = ctx.createGain();
     osc.connect(gain);
     gain.connect(ctx.destination);
-    osc.type = 'bell' as any || 'sine';
+    osc.type = 'sine';
     osc.frequency.setValueAtTime(880, ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
     gain.gain.setValueAtTime(0.2, ctx.currentTime);
@@ -110,21 +110,35 @@ export function useAppState() {
 
     const channel = supabase
       .channel('schema-db-changes')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'history' }, (payload) => {
-        refreshData();
-        const row = payload.new as HistoryRecord;
-        if (row.categoria === 'ocorrencia' || row.categoria === 'atraso' || row.categoria === 'merito' || row.categoria === 'coordenação') {
-          playDing();
-          toast(`Novo registro: ${row.categoria.toUpperCase()}`, {
-            description: `${row.alunoNome || 'Aluno'} - ${row.detalhe}`,
-            duration: 5000,
-          });
-          sendNativeNotification(`Novo registro: ${row.categoria.toUpperCase()}`, `${row.alunoNome || 'Aluno'} - ${row.detalhe}`);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'history' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const row = payload.new as any;
+          const newRecord: HistoryRecord = {
+            id: row.id, alunoId: row.aluno_id, alunoNome: row.aluno_nome, turma: row.turma, categoria: row.categoria,
+            detalhe: row.detalhe, timestamp: row.timestamp, rawTimestamp: row.raw_timestamp, professor: row.professor,
+            autorRole: row.autor_role, fotoUrl: null // No photo in real-time payload anyway
+          };
+          setRecords(prev => [newRecord, ...prev].sort((a, b) => b.rawTimestamp - a.rawTimestamp).slice(0, 500));
+
+          if (newRecord.categoria === 'ocorrencia' || newRecord.categoria === 'atraso' || newRecord.categoria === 'merito' || newRecord.categoria === 'coordenação') {
+            playDing();
+            toast(`Novo registro: ${newRecord.categoria.toUpperCase()}`, {
+              description: `${newRecord.alunoNome || 'Aluno'} - ${newRecord.detalhe}`,
+              duration: 5000,
+            });
+            sendNativeNotification(`Novo registro: ${newRecord.categoria.toUpperCase()}`, `${newRecord.alunoNome || 'Aluno'} - ${newRecord.detalhe}`);
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const row = payload.new as any;
+          setRecords(prev => prev.map(r => r.id === row.id ? { ...r, detalhe: row.detalhe, alunoNome: row.aluno_nome, turma: row.turma } : r));
+        } else if (payload.eventType === 'DELETE') {
+          setRecords(prev => prev.filter(r => r.id === payload.old.id));
         }
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'avisos' }, (payload) => {
-        refreshData();
-        const row = payload.new as Aviso;
+        const row = payload.new as any;
+        const newAviso: Aviso = { id: row.id, texto: row.texto, autor: row.autor, timestamp: row.timestamp, rawTimestamp: row.raw_timestamp };
+        setAvisos(prev => [newAviso, ...prev].sort((a, b) => b.rawTimestamp - a.rawTimestamp));
         playDing();
         toast('📣 NOVO AVISO DA GESTÃO', {
           description: row.texto,
@@ -132,9 +146,11 @@ export function useAppState() {
         });
         sendNativeNotification('📣 NOVO AVISO DA GESTÃO', row.texto);
       })
-      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-        refreshData();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'active_exits' }, () => store.getActiveExits().then(setActiveExits))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'coordination_queue' }, () => store.getCoordinationQueue().then(setCoordinationQueue))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'library_queue' }, () => store.getLibraryQueue().then(setLibraryQueue))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'suspensions' }, () => store.getSuspensions().then(setSuspensions))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'alumnos' }, () => store.getConfig().then(cfg => cfg && setAlunos(cfg.alunosList)))
       .subscribe();
 
     return () => {

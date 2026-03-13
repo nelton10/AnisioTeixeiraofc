@@ -226,15 +226,31 @@ export async function removeActiveExit(id: string) {
 // History
 export async function getHistory(): Promise<HistoryRecord[]> {
   const data = await handleResponse(
-    supabase.from('history').select('*').order('raw_timestamp', { ascending: false }),
+    supabase.from('history')
+      .select('id, aluno_id, aluno_nome, turma, categoria, detalhe, timestamp, raw_timestamp, professor, autor_role')
+      .order('raw_timestamp', { ascending: false })
+      .limit(300),
     'getHistory',
     STORAGE_KEYS.CACHE_HISTORY
   ).catch(() => []);
 
   return (data || []).map((r: any) => ({
     id: r.id, alunoId: r.aluno_id, alunoNome: r.aluno_nome, turma: r.turma, categoria: r.categoria,
-    detalhe: r.detalhe, timestamp: r.timestamp, rawTimestamp: r.raw_timestamp, professor: r.professor, autorRole: r.autor_role, fotoUrl: r.foto_url
+    detalhe: r.detalhe, timestamp: r.timestamp, rawTimestamp: r.raw_timestamp, professor: r.professor, autorRole: r.autor_role, fotoUrl: null
   }));
+}
+
+export async function getHistoryRecordWithPhoto(id: string): Promise<HistoryRecord | null> {
+  const data = await handleResponse(
+    supabase.from('history').select('*').eq('id', id).single(),
+    'getHistoryRecordWithPhoto'
+  ).catch(() => null);
+
+  if (!data) return null;
+  return {
+    id: data.id, alunoId: data.aluno_id, alunoNome: data.aluno_nome, turma: data.turma, categoria: data.categoria,
+    detalhe: data.detalhe, timestamp: data.timestamp, rawTimestamp: data.raw_timestamp, professor: data.professor, autorRole: data.autor_role, fotoUrl: data.foto_url
+  };
 }
 
 export async function addHistoryRecord(record: HistoryRecord) {
@@ -274,8 +290,26 @@ export async function deleteMultipleHistoryRecords(ids: string[]) {
 
 // Coordination Queue
 export async function getCoordinationQueue(): Promise<CoordinationItem[]> {
-  const data = await handleResponse(supabase.from('coordination_queue').select('*'), 'getCoordinationQueue', STORAGE_KEYS.CACHE_COORD).catch(() => []);
-  return (data || []).map((r: any) => ({ id: r.id, alunoId: r.aluno_id, alunoNome: r.aluno_nome, turma: r.turma, motivo: r.motivo, timestamp: r.timestamp, professor: r.professor, fotoUrl: r.foto_url }));
+  const data = await handleResponse(
+    supabase.from('coordination_queue').select('id, aluno_id, aluno_nome, turma, motivo, timestamp, professor'),
+    'getCoordinationQueue',
+    STORAGE_KEYS.CACHE_COORD
+  ).catch(() => []);
+  return (data || []).map((r: any) => ({
+    id: r.id, alunoId: r.aluno_id, alunoNome: r.aluno_nome, turma: r.turma, motivo: r.motivo, timestamp: r.timestamp, professor: r.professor, fotoUrl: null
+  }));
+}
+
+export async function getCoordinationItemWithPhoto(id: string): Promise<CoordinationItem | null> {
+  const data = await handleResponse(
+    supabase.from('coordination_queue').select('*').eq('id', id).single(),
+    'getCoordinationItemWithPhoto'
+  ).catch(() => null);
+
+  if (!data) return null;
+  return {
+    id: data.id, alunoId: data.aluno_id, alunoNome: data.aluno_nome, turma: data.turma, motivo: data.motivo, timestamp: data.timestamp, professor: data.professor, fotoUrl: data.foto_url
+  };
 }
 
 export async function addCoordinationItem(item: CoordinationItem) {
@@ -289,8 +323,26 @@ export async function removeCoordinationItem(id: string) {
 
 // Library Queue
 export async function getLibraryQueue(): Promise<LibraryItem[]> {
-  const data = await handleResponse(supabase.from('library_queue').select('*'), 'getLibraryQueue', STORAGE_KEYS.CACHE_LIB).catch(() => []);
-  return (data || []).map((r: any) => ({ id: r.id, alunoId: r.aluno_id, alunoNome: r.aluno_nome, turma: r.turma, timestamp: r.timestamp, professorCoord: r.professor_coord, obsCoord: r.obs_coord, fotoUrl: r.foto_url }));
+  const data = await handleResponse(
+    supabase.from('library_queue').select('id, aluno_id, aluno_nome, turma, timestamp, professor_coord, obs_coord'),
+    'getLibraryQueue',
+    STORAGE_KEYS.CACHE_LIB
+  ).catch(() => []);
+  return (data || []).map((r: any) => ({
+    id: r.id, alunoId: r.aluno_id, alunoNome: r.aluno_nome, turma: r.turma, timestamp: r.timestamp, professorCoord: r.professor_coord, obsCoord: r.obs_coord, fotoUrl: null
+  }));
+}
+
+export async function getLibraryItemWithPhoto(id: string): Promise<LibraryItem | null> {
+  const data = await handleResponse(
+    supabase.from('library_queue').select('*').eq('id', id).single(),
+    'getLibraryItemWithPhoto'
+  ).catch(() => null);
+
+  if (!data) return null;
+  return {
+    id: data.id, alunoId: data.aluno_id, alunoNome: data.aluno_nome, turma: data.turma, timestamp: data.timestamp, professorCoord: data.professor_coord, obsCoord: data.obs_coord, fotoUrl: data.foto_url
+  };
 }
 
 export async function addLibraryItem(item: LibraryItem) {

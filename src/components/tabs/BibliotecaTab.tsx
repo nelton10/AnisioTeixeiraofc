@@ -15,21 +15,29 @@ const BibliotecaTab: React.FC<BibliotecaTabProps> = ({ libraryQueue, username, n
 
   const handleAction = async (item: LibraryItem, actionType: string) => {
     const now = new Date(); const ts = now.toLocaleString('pt-PT'); const raw = now.getTime();
+    
+    // Fetch full item to get photo
+    let photo = item.fotoUrl;
+    if (!photo) {
+      const full = await store.getLibraryItemWithPhoto(item.id);
+      photo = full?.fotoUrl || null;
+    }
+
     if (actionType === 'nao_apareceu') {
       await store.addHistoryRecord({
         id: store.generateId(), alunoId: item.alunoId, alunoNome: item.alunoNome, turma: item.turma,
         categoria: 'ocorrencia', detalhe: 'NÃO APARECEU NA BIBLIOTECA após encaminhamento.',
-        timestamp: ts, rawTimestamp: raw, professor: username
+        timestamp: ts, rawTimestamp: raw, professor: username, fotoUrl: photo
       });
       await store.addCoordinationItem({
         id: store.generateId(), alunoId: item.alunoId, alunoNome: item.alunoNome, turma: item.turma,
-        motivo: "NÃO APARECEU NA BIBLIOTECA (REINCIDENTE - VOLTA PARA COORDENAÇÃO)", timestamp: ts, professor: username
+        motivo: "NÃO APARECEU NA BIBLIOTECA (REINCIDENTE - VOLTA PARA COORDENAÇÃO)", timestamp: ts, professor: username, fotoUrl: photo
       });
     } else if (actionType === 'negativo') {
       await store.addHistoryRecord({
         id: store.generateId(), alunoId: item.alunoId, alunoNome: item.alunoNome, turma: item.turma,
         categoria: 'ocorrencia', detalhe: 'Desempenho negativo na biblioteca.',
-        timestamp: ts, rawTimestamp: raw, professor: username
+        timestamp: ts, rawTimestamp: raw, professor: username, fotoUrl: photo
       });
     }
     const obsTxt = observacoes[item.id]?.trim();
@@ -37,7 +45,7 @@ const BibliotecaTab: React.FC<BibliotecaTabProps> = ({ libraryQueue, username, n
     await store.addHistoryRecord({
       id: store.generateId(), alunoId: item.alunoId, alunoNome: item.alunoNome, turma: item.turma,
       categoria: 'medida', detalhe: resultText,
-      timestamp: ts, rawTimestamp: raw + 10, professor: username
+      timestamp: ts, rawTimestamp: raw + 10, professor: username, fotoUrl: photo
     });
 
     setObservacoes(prev => { const next = { ...prev }; delete next[item.id]; return next; });

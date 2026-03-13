@@ -147,7 +147,6 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
 
   return (
     <div className="space-y-5 animate-slide-up">
-      {/* Foto Viewer */}
       {fotoViewer && (
         <div className="fixed inset-0 z-[130] bg-foreground/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setFotoViewer(null)}>
           <div className="relative max-w-lg w-full">
@@ -298,7 +297,15 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
                 <div className="flex justify-between items-center mt-3">
                   <span className="text-[10px] text-muted-foreground">{formatDataLista(r.timestamp)} • {formatHoraFortaleza(r.timestamp)}h • {r.professor}</span>
                   <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {r.fotoUrl && <button onClick={() => setFotoViewer(r.fotoUrl!)} className="text-primary p-1"><Camera size={14} /></button>}
+                    {r.fotoUrl !== undefined && <button onClick={async () => {
+                      if (r.fotoUrl) { setFotoViewer(r.fotoUrl); return; }
+                      notify("A carregar imagem...");
+                      let fullRec = null;
+                      if (r._type === 'library') fullRec = await store.getLibraryItemWithPhoto(r.id);
+                      else fullRec = await store.getHistoryRecordWithPhoto(r.id);
+                      if (fullRec?.fotoUrl) setFotoViewer(fullRec.fotoUrl);
+                      else notify("Imagem não encontrada.");
+                    }} className="text-primary p-1"><Camera size={14} /></button>}
                     {userRole === 'admin' && (
                       <>
                         {r._type === 'history' && <button onClick={() => { setEditModal(r); setEditText(r.detalhe); }} className="text-primary p-1"><Edit size={14} /></button>}
