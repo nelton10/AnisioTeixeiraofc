@@ -47,7 +47,8 @@ const OcorrenciasTab: React.FC<OcorrenciasTabProps> = ({ alunos, turmasExistente
   };
 
   const handleSubmit = async () => {
-    const ts = new Date().toLocaleString('pt-PT');
+    // A CORREÇÃO ESTÁ AQUI: O banco de dados exige o formato ISO, não a string regional
+    const ts = new Date().toISOString();
     const raw = Date.now();
     for (const id of selectedAlunosIds) {
       const al = alunos.find(a => a.id === id);
