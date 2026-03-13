@@ -73,8 +73,9 @@ const AnaliseAulaTab: React.FC<AnaliseAulaTabProps> = ({ records, turmasExistent
             setComment('');
             setActiveSubTab('historico');
         } catch (e: any) {
-            notify("Erro ao salvar avaliação.");
-        }
+    console.error("Falha detalhada:", e);
+    notify("Erro: " + e.message);
+}
     };
 
     const renderStars = (rating: number, interactive = false) => {
