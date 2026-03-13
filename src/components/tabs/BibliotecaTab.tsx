@@ -14,7 +14,10 @@ const BibliotecaTab: React.FC<BibliotecaTabProps> = ({ libraryQueue, username, n
   const [observacoes, setObservacoes] = React.useState<Record<string, string>>({});
 
   const handleAction = async (item: LibraryItem, actionType: string) => {
-    const now = new Date(); const ts = now.toLocaleString('pt-PT'); const raw = now.getTime();
+    const now = new Date(); 
+    // A CORREÇÃO ESTÁ AQUI: O banco de dados exige o formato ISO, não a string regional
+    const ts = now.toISOString(); 
+    const raw = now.getTime();
     
     // Fetch full item to get photo
     let photo = item.fotoUrl;
