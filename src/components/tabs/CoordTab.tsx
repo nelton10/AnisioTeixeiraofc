@@ -52,7 +52,8 @@ const CoordTab: React.FC<CoordTabProps> = ({ coordinationQueue, suspensions, avi
       id: store.generateId(),
       texto: novoAviso,
       autor: username,
-      timestamp: now.toLocaleString('pt-PT'),
+      // A CORREÇÃO ESTÁ AQUI
+      timestamp: now.toISOString(),
       rawTimestamp: now.getTime()
     });
     setNovoAviso('');
@@ -67,7 +68,8 @@ const CoordTab: React.FC<CoordTabProps> = ({ coordinationQueue, suspensions, avi
   };
 
   const handleAction = async (item: CoordinationItem, type: string) => {
-    const now = new Date(); const ts = now.toLocaleString('pt-PT'); const raw = now.getTime();
+    // A CORREÇÃO ESTÁ AQUI
+    const now = new Date(); const ts = now.toISOString(); const raw = now.getTime();
     
     // Fetch full item to get photo if it exists (for history persistence)
     let photo = item.fotoUrl;
@@ -93,7 +95,8 @@ const CoordTab: React.FC<CoordTabProps> = ({ coordinationQueue, suspensions, avi
 
   const handleSuspend = async () => {
     if (!suspensionModal || !suspensionReturnDate) return notify("Insira a data de retorno!");
-    const now = new Date(); const ts = now.toLocaleString('pt-PT'); const raw = now.getTime();
+    // A CORREÇÃO ESTÁ AQUI
+    const now = new Date(); const ts = now.toISOString(); const raw = now.getTime();
 
     // Fetch full item to get photo
     let photo = suspensionModal.fotoUrl;
@@ -118,7 +121,8 @@ const CoordTab: React.FC<CoordTabProps> = ({ coordinationQueue, suspensions, avi
 
   const handleEndSuspension = async () => {
     if (!endSuspensionModal || !endSuspensionObs.trim()) return notify("Registe as observações!");
-    const now = new Date(); const ts = now.toLocaleString('pt-PT'); const raw = now.getTime();
+    // A CORREÇÃO ESTÁ AQUI
+    const now = new Date(); const ts = now.toISOString(); const raw = now.getTime();
     await store.addHistoryRecord({
       id: store.generateId(), alunoId: endSuspensionModal.alunoId, alunoNome: endSuspensionModal.alunoNome, turma: endSuspensionModal.turma,
       categoria: 'coordenação', detalhe: `SUSPENSÃO ENCERRADA. OBS: ${endSuspensionObs}`,
