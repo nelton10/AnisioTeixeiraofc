@@ -60,7 +60,8 @@ const AnaliseAulaTab: React.FC<AnaliseAulaTabProps> = ({ records, turmasExistent
                 turma: selectedTurma,
                 categoria: 'avaliacao_aula',
                 detalhe: JSON.stringify({ stars, comment }),
-                timestamp: now.toLocaleString('pt-BR'),
+                // CORREÇÃO 1: Salvando no formato ISO que o banco de dados exige
+                timestamp: now.toISOString(),
                 rawTimestamp: now.getTime(),
                 professor: username,
                 autorRole: userRole
@@ -199,7 +200,10 @@ const AnaliseAulaTab: React.FC<AnaliseAulaTabProps> = ({ records, turmasExistent
                                         <div className="flex justify-between items-start mb-3">
                                             <div>
                                                 <span className="text-xs font-black bg-primary/10 text-primary px-2.5 py-1 rounded-lg mr-2 uppercase">{av.turma}</span>
-                                                <span className="text-[10px] font-extrabold text-muted-foreground uppercase">{av.timestamp.split(',')[0]}</span>
+                                                {/* CORREÇÃO 2: Convertendo a string ISO de volta para o formato de data humano na exibição */}
+                                                <span className="text-[10px] font-extrabold text-muted-foreground uppercase">
+                                                    {new Date(av.timestamp).toLocaleDateString('pt-BR')}
+                                                </span>
                                             </div>
                                             {renderStars(details.stars)}
                                         </div>
