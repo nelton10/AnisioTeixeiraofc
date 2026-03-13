@@ -81,7 +81,7 @@ const Index = () => {
             )}
             {state.activeTab === 'historico' && (
               <HistoricoTab records={state.records} libraryQueue={state.libraryQueue} turmasExistentes={state.turmasExistentes}
-                userRole={state.authState.role} notify={state.notify} refreshData={state.refreshData} />
+                userRole={state.authState.role} notify={state.notify} refreshData={state.refreshData} refreshHistory={state.refreshHistory} />
             )}
             {state.activeTab === 'atrasos' && (
               <AtrasosTab alunos={state.alunos} turmasExistentes={state.turmasExistentes}

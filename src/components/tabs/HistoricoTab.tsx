@@ -10,6 +10,7 @@ interface HistoricoTabProps {
   userRole: UserRole;
   notify: (msg: string) => void;
   refreshData: () => Promise<void>;
+  refreshHistory: (start?: number, end?: number) => Promise<void>;
 }
 
 const categoriaColors: Record<string, string> = {
@@ -22,7 +23,7 @@ const categoriaColors: Record<string, string> = {
   avaliacao_aula: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20 bg-indigo-500/5',
 };
 
-const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turmasExistentes, userRole, notify, refreshData }) => {
+const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turmasExistentes, userRole, notify, refreshData, refreshHistory }) => {
   const [filtroCategoria, setFiltroCategoria] = useState('ocorrencia');
   const [filtroTurma, setFiltroTurma] = useState('');
   const [filtroBuscaNome, setFiltroBuscaNome] = useState('');
@@ -143,6 +144,31 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
     } catch (e) {
       notify("Erro ao apagar registos multi.");
     }
+  };
+
+  const handleSearchDatabase = async () => {
+    let startTs: number | undefined;
+    let endTs: number | undefined;
+
+    if (dataInicio) {
+      const d = new Date(dataInicio);
+      d.setHours(0, 0, 0, 0);
+      startTs = d.getTime();
+    }
+    if (dataFim) {
+      const d = new Date(dataFim);
+      d.setHours(23, 59, 59, 999);
+      endTs = d.getTime();
+    }
+
+    if (!startTs && !dataFim) {
+      notify("Selecione pelo menos uma data para busca profunda.");
+      return;
+    }
+
+    notify("Buscando registros no banco...");
+    await refreshHistory(startTs, endTs);
+    notify("Busca concluída!");
   };
 
   return (

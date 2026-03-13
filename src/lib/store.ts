@@ -224,11 +224,25 @@ export async function removeActiveExit(id: string) {
 }
 
 // History
-export async function getHistory(): Promise<HistoryRecord[]> {
+export async function getHistory(startDate?: number, endDate?: number): Promise<HistoryRecord[]> {
+  let query = supabase.from('history')
+    .select('id, aluno_id, aluno_nome, turma, categoria, detalhe, timestamp, raw_timestamp, professor, autor_role')
+    .order('raw_timestamp', { ascending: false });
+
+  if (startDate) {
+    query = query.gte('raw_timestamp', startDate);
+  } else {
+    // Default to last 12 hours
+    const twelveHoursAgo = Date.now() - (12 * 60 * 60 * 1000);
+    query = query.gte('raw_timestamp', twelveHoursAgo);
+  }
+
+  if (endDate) {
+    query = query.lte('raw_timestamp', endDate);
+  }
+
   const data = await handleResponse(
-    supabase.from('history')
-      .select('id, aluno_id, aluno_nome, turma, categoria, detalhe, timestamp, raw_timestamp, professor, autor_role')
-      .order('raw_timestamp', { ascending: false }),
+    query,
     'getHistory',
     STORAGE_KEYS.CACHE_HISTORY
   ).catch(() => []);

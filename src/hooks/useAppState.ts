@@ -62,6 +62,13 @@ export function useAppState() {
   const [currentTimeStr, setCurrentTimeStr] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
+  const refreshHistory = useCallback(async (start?: number, end?: number) => {
+    try {
+      const hist = await store.getHistory(start, end);
+      setRecords(hist);
+    } catch (e) { console.error(e); }
+  }, []);
+
   const refreshData = useCallback(async () => {
     try {
       const cfg = await store.getConfig();
@@ -76,7 +83,7 @@ export function useAppState() {
 
       const [exits, hist, coord, lib, susp, avs] = await Promise.all([
         store.getActiveExits(),
-        store.getHistory(),
+        store.getHistory(), // Will default to 12h
         store.getCoordinationQueue(),
         store.getLibraryQueue(),
         store.getSuspensions(),
