@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Star, MessageSquareText, Save, History, Search } from 'lucide-react';
+import { Star, MessageSquareText, Save, History, Search, Clock } from 'lucide-react';
 import * as store from '@/lib/store';
 import { HistoryRecord } from '@/types';
 
@@ -20,6 +20,8 @@ const AnaliseAulaTab: React.FC<AnaliseAulaTabProps> = ({ records, turmasExistent
 
     // Histórico
     const [filtroTurma, setFiltroTurma] = useState('');
+    const [filtroDataInicio, setFiltroDataInicio] = useState('');
+    const [filtroDataFim, setFiltroDataFim] = useState('');
     const [filtroProfessor, setFiltroProfessor] = useState(userRole === 'professor' ? username : '');
 
     const availableProfessors = useMemo(() => {
@@ -33,9 +35,16 @@ const AnaliseAulaTab: React.FC<AnaliseAulaTabProps> = ({ records, turmasExistent
             if (r.categoria !== 'avaliacao_aula') return false;
             if (filtroTurma && r.turma !== filtroTurma) return false;
             if (filtroProfessor && r.professor !== filtroProfessor) return false;
+            
+            if (filtroDataInicio || filtroDataFim) {
+                if (!r.rawTimestamp) return false;
+                const rDate = new Date(r.rawTimestamp); rDate.setHours(0, 0, 0, 0);
+                if (filtroDataInicio) { const d = new Date(filtroDataInicio); d.setHours(0, 0, 0, 0); if (rDate < d) return false; }
+                if (filtroDataFim) { const d = new Date(filtroDataFim); d.setHours(23, 59, 59, 999); if (rDate > d) return false; }
+            }
             return true;
         });
-    }, [records, filtroTurma, filtroProfessor]);
+    }, [records, filtroTurma, filtroProfessor, filtroDataInicio, filtroDataFim]);
 
     const handleSave = async () => {
         if (!selectedTurma) { notify("Selecione uma turma para avaliar."); return; }
@@ -159,10 +168,28 @@ const AnaliseAulaTab: React.FC<AnaliseAulaTabProps> = ({ records, turmasExistent
                                 {availableProfessors.map(p => <option key={p} value={p}>{p}</option>)}
                             </select>
                         </div>
+                        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/30">
+                            <div>
+                                <label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block ml-1">De</label>
+                                <input type="date" value={filtroDataInicio} onChange={e => setFiltroDataInicio(e.target.value)} 
+                                    className="w-full bg-secondary border border-border rounded-xl p-2.5 text-[11px] font-bold outline-none text-foreground" />
+                            </div>
+                            <div>
+                                <label className="text-[9px] font-black text-muted-foreground uppercase mb-1 block ml-1">Até</label>
+                                <input type="date" value={filtroDataFim} onChange={e => setFiltroDataFim(e.target.value)} 
+                                    className="w-full bg-secondary border border-border rounded-xl p-2.5 text-[11px] font-bold outline-none text-foreground" />
+                            </div>
+                        </div>
                     </div>
 
                     <div className="space-y-4">
-                        {avaliacoes.length === 0 ? (
+                        {!filtroDataInicio || !filtroDataFim ? (
+                            <div className="p-10 text-center space-y-3 bg-secondary/30 rounded-3xl border border-dashed border-border/50">
+                                <Clock size={24} className="mx-auto text-muted-foreground/40" />
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Escolha um Período</p>
+                                <p className="text-[11px] text-muted-foreground/60">Selecione as datas para visualizar as avaliações deste intervalo.</p>
+                            </div>
+                        ) : avaliacoes.length === 0 ? (
                             <p className="text-center py-10 text-muted-foreground text-sm font-bold bg-secondary/50 rounded-3xl border border-dashed border-border">Nenhuma avaliação encontrada.</p>
                         ) : (
                             avaliacoes.map(av => {

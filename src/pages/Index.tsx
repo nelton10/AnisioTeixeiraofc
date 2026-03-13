@@ -98,7 +98,7 @@ const Index = () => {
                 notify={state.notify} refreshData={state.refreshData} />
             )}
             {state.activeTab === 'pesquisa' && (
-              <PesquisaTab alunos={state.alunos} records={state.records} turmasExistentes={state.turmasExistentes} />
+              <PesquisaTab alunos={state.alunos} records={state.records} turmasExistentes={state.turmasExistentes} refreshHistory={state.refreshHistory} />
             )}
             {state.activeTab === 'avaliar_aula' && (
               <AnaliseAulaTab records={state.records} turmasExistentes={state.turmasExistentes}

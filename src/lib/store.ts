@@ -229,8 +229,11 @@ export async function getHistory(startDate?: number, endDate?: number): Promise<
     .select('id, aluno_id, aluno_nome, turma, categoria, detalhe, timestamp, raw_timestamp, professor, autor_role')
     .order('raw_timestamp', { ascending: false });
 
-  if (startDate) {
-    query = query.gte('raw_timestamp', startDate);
+  if (startDate !== undefined) {
+    if (startDate > 0) {
+      query = query.gte('raw_timestamp', startDate);
+    }
+    // If startDate is 0, we don't apply the gte filter, fetching all history
   } else {
     // Default to last 12 hours
     const twelveHoursAgo = Date.now() - (12 * 60 * 60 * 1000);

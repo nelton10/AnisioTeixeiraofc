@@ -30,7 +30,7 @@ interface AlunosTabProps {
 
 const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records, libraryQueue, userRole, notify, refreshData }) => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedTurma, setSelectedTurma] = useState('Todas');
+    const [selectedTurma, setSelectedTurma] = useState('');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingAluno, setEditingAluno] = useState<Aluno | null>(null);
     const [viewingAluno, setViewingAluno] = useState<Aluno | null>(null);
@@ -225,14 +225,23 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records
                         value={selectedTurma}
                         onChange={e => setSelectedTurma(e.target.value)}
                     >
-                        <option value="Todas">Todas as Turmas</option>
+                        <option value="">Selecione a Turma</option>
                         {turmasExistentes.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                 </div>
             </div>
 
-            {/* Lista de Alunos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {(!selectedTurma && !searchTerm) ? (
+                <div className="glass p-20 rounded-3xl text-center border-2 border-dashed border-border space-y-4">
+                    <div className="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Users size={32} className="text-primary/20" />
+                    </div>
+                    <p className="font-black text-muted-foreground text-sm uppercase tracking-widest">Aguardando Seleção</p>
+                    <p className="text-xs text-muted-foreground/60 max-w-xs mx-auto">Escolha uma turma ou pesquise por nome para listar os alunos.</p>
+                </div>
+            ) : (
+                /* Lista de Alunos */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredAlunos.length === 0 ? (
                     <div className="col-span-2 glass p-10 rounded-3xl text-center border-2 border-dashed border-border space-y-4">
                         <div className="text-5xl">🎓</div>
@@ -304,6 +313,7 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records
                     </div>
                 ))}
             </div>
+            )}
 
             {/* Modal Adicionar */}
             {isAddModalOpen && (

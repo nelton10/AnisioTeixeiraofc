@@ -29,6 +29,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
   const [filtroBuscaNome, setFiltroBuscaNome] = useState('');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
+  const [verTodoPeriodo, setVerTodoPeriodo] = useState(false);
 
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, nome: string, type: 'history' | 'library' } | null>(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
@@ -98,14 +99,18 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
       if (filtroTurma && r.turma !== filtroTurma) return false;
       if (filtroBuscaNome && !r.alunoNome?.toLowerCase().includes(filtroBuscaNome.toLowerCase())) return false;
 
-      const recordTime = parseDateString(r.timestamp);
-      if (dataInicio && recordTime > 0) {
-        const start = new Date(`${dataInicio}T00:00:00`).getTime();
-        if (recordTime < start) return false;
-      }
-      if (dataFim && recordTime > 0) {
-        const end = new Date(`${dataFim}T23:59:59`).getTime();
-        if (recordTime > end) return false;
+      const recordTime = r.rawTimestamp || 0;
+      if (!verTodoPeriodo) {
+        if (dataInicio) {
+          const start = new Date(dataInicio);
+          start.setHours(0, 0, 0, 0);
+          if (recordTime < start.getTime()) return false;
+        }
+        if (dataFim) {
+          const end = new Date(dataFim);
+          end.setHours(23, 59, 59, 999);
+          if (recordTime > end.getTime()) return false;
+        }
       }
 
       return true;
@@ -150,18 +155,22 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
     let startTs: number | undefined;
     let endTs: number | undefined;
 
-    if (dataInicio) {
-      const d = new Date(dataInicio);
-      d.setHours(0, 0, 0, 0);
-      startTs = d.getTime();
-    }
-    if (dataFim) {
-      const d = new Date(dataFim);
-      d.setHours(23, 59, 59, 999);
-      endTs = d.getTime();
+    if (verTodoPeriodo) {
+      startTs = 0; // Fetch all
+    } else {
+      if (dataInicio) {
+        const d = new Date(dataInicio);
+        d.setHours(0, 0, 0, 0);
+        startTs = d.getTime();
+      }
+      if (dataFim) {
+        const d = new Date(dataFim);
+        d.setHours(23, 59, 59, 999);
+        endTs = d.getTime();
+      }
     }
 
-    if (!startTs && !dataFim) {
+    if (startTs === undefined && !dataFim) {
       notify("Selecione pelo menos uma data para busca profunda.");
       return;
     }
@@ -263,9 +272,17 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
           ))}
         </div>
           <div className="flex flex-col gap-2">
-            <span className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-1.5">
-              <History size={12} /> Intervalo (Vazio = Últimas 12h)
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-1.5">
+                <History size={12} /> Intervalo (Vazio = Últimas 12h)
+              </span>
+              <button 
+                onClick={() => setVerTodoPeriodo(!verTodoPeriodo)}
+                className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg transition-all ${verTodoPeriodo ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}
+              >
+                {verTodoPeriodo ? 'Todo o Período: ON' : 'Todo o Período: OFF'}
+              </button>
+            </div>
             <div className="flex items-center gap-2">
               <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)}
                 className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/20 text-foreground" />

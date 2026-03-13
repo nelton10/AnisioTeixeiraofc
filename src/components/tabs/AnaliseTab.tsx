@@ -219,198 +219,210 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
         </div>
       </div>
 
-      {/* Metric Cards */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-destructive/5 p-4 rounded-2xl border border-destructive/10 text-center relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-destructive" />
-          <p className="text-[10px] font-extrabold text-destructive/70 uppercase tracking-widest mb-1.5">Total</p>
-          <p className="text-3xl font-black text-destructive">{ocorrenciasTotais}</p>
-        </div>
-        <div className="bg-warning/5 p-4 rounded-2xl border border-warning/10 text-center relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-warning" />
-          <p className="text-[10px] font-extrabold text-warning/70 uppercase tracking-widest mb-1.5">Média/Dia</p>
-          <p className="text-3xl font-black text-warning">{mediaPorDia}</p>
-        </div>
-        <div className="bg-primary p-4 rounded-2xl text-center relative overflow-hidden shadow-md">
-          <div className="absolute top-0 left-0 w-full h-1 bg-primary-foreground/20" />
-          <p className="text-[10px] font-extrabold text-primary-foreground/70 uppercase tracking-widest mb-1.5">No Filtro</p>
-          <p className="text-3xl font-black text-primary-foreground">{ocorrenciasPeriodo}</p>
-        </div>
-      </div>
-
-      {/* Charts Row 1: Pie and Line */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Pie Chart: Distribution */}
-        <div className="glass rounded-3xl p-6 shadow-lg h-72 flex flex-col">
-          <h3 className="text-sm font-black text-foreground mb-2 flex items-center gap-2">
-            <PieChartIcon size={18} className="text-primary" /> Distribuição Diária
-          </h3>
-          <div className="flex-1 w-full relative">
-            {pieData.length === 0 ? <p className="text-xs text-muted-foreground m-auto absolute inset-0 flex items-center justify-center">Sem dados de hoje.</p> : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%" cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip content={<CustomTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
+      {!filtroDataInicio || !filtroDataFim ? (
+        <div className="glass rounded-3xl p-20 text-center space-y-4 shadow-lg">
+          <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-4">
+            <BarChart3 size={32} className="text-primary/20" />
           </div>
+          <p className="font-black text-muted-foreground text-sm uppercase tracking-widest">Aguardando Período...</p>
+          <p className="text-xs text-muted-foreground/60 max-w-xs mx-auto">Por favor, selecione uma <b>Data Início</b> e <b>Data Fim</b> acima para gerar a análise estatística.</p>
         </div>
-
-        {/* Line Chart: Trends */}
-        <div className="glass rounded-3xl p-6 shadow-lg h-72 flex flex-col">
-          <h3 className="text-sm font-black text-foreground mb-2 flex items-center gap-2">
-            <TrendingUp size={18} className="text-primary" /> Tendências (Últimos Dias)
-          </h3>
-          <div className="flex-1 w-full relative">
-            {dashboard.trendData.length === 0 ? <p className="text-xs text-muted-foreground m-auto absolute inset-0 flex items-center justify-center">Sem dados recentes.</p> : (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dashboard.trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
-                  <RechartsTooltip content={<CustomTooltip />} />
-                  <Line type="monotone" name="Saídas" dataKey="saidas" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                  <Line type="monotone" name="Ocorrências" dataKey="ocorrencias" stroke="hsl(var(--destructive))" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Behavior Chart (Top Turmas replaced with Recharts BarChart) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="glass rounded-3xl p-6 shadow-lg h-80 flex flex-col">
-          <h3 className="text-sm font-black text-foreground mb-6 flex items-center gap-2">
-            <BarChart3 size={18} className="text-primary" /> Ocorrências por Turma (Top 5)
-          </h3>
-          <div className="flex-1 w-full relative">
-            {dashboard.turmaArr.length === 0 ? <p className="text-xs text-muted-foreground m-auto absolute inset-0 flex items-center justify-center">Sem dados.</p> : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dashboard.turmaArr} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="turma" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                  <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--secondary))' }} />
-                  <Bar dataKey="count" name="Ocorrências" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        {/* Heatmap (Dias x Períodos) */}
-        <div className="glass rounded-3xl p-6 shadow-lg h-80 flex flex-col">
-          <h3 className="text-sm font-black text-foreground mb-6 flex items-center gap-2">
-            <Activity size={18} className="text-destructive" /> Mapa de Calor (Incidentes)
-          </h3>
-          <div className="flex-1 flex flex-col justify-center">
-            <div className="grid grid-cols-4 gap-2 text-center mb-2">
-              <div className="text-[10px] font-bold text-muted-foreground uppercase">Dia</div>
-              <div className="text-[10px] font-bold text-muted-foreground uppercase">Manhã</div>
-              <div className="text-[10px] font-bold text-muted-foreground uppercase">Tarde</div>
-              <div className="text-[10px] font-bold text-muted-foreground uppercase">Noite</div>
+      ) : (
+        <>
+          {/* Metric Cards */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-destructive/5 p-4 rounded-2xl border border-destructive/10 text-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-destructive" />
+              <p className="text-[10px] font-extrabold text-destructive/70 uppercase tracking-widest mb-1.5">Total</p>
+              <p className="text-3xl font-black text-destructive">{ocorrenciasTotais}</p>
             </div>
-            {dashboard.heatmapMatrix.map(row => (
-              <div key={row.day} className="grid grid-cols-4 gap-2 mb-2 items-center">
-                <div className="text-xs font-black text-foreground text-center">{row.day}</div>
-                {(['manha', 'tarde', 'noite'] as const).map(period => {
-                  const val = row[period];
-                  const intensity = dashboard.maxHeat > 0 ? val / dashboard.maxHeat : 0;
-                  const bgColor = intensity === 0 ? 'bg-secondary' : `bg-destructive`;
+            <div className="bg-warning/5 p-4 rounded-2xl border border-warning/10 text-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-warning" />
+              <p className="text-[10px] font-extrabold text-warning/70 uppercase tracking-widest mb-1.5">Média/Dia</p>
+              <p className="text-3xl font-black text-warning">{mediaPorDia}</p>
+            </div>
+            <div className="bg-primary p-4 rounded-2xl text-center relative overflow-hidden shadow-md">
+              <div className="absolute top-0 left-0 w-full h-1 bg-primary-foreground/20" />
+              <p className="text-[10px] font-extrabold text-primary-foreground/70 uppercase tracking-widest mb-1.5">No Filtro</p>
+              <p className="text-3xl font-black text-primary-foreground">{ocorrenciasPeriodo}</p>
+            </div>
+          </div>
 
-                  return (
-                    <div key={period}
-                      className={`h-10 rounded-xl flex items-center justify-center transition-all ${bgColor}`}
-                      style={{ opacity: intensity === 0 ? 1 : Math.max(0.3, intensity) }}>
-                      <span className={`text-xs font-bold ${intensity > 0.5 ? 'text-white' : (intensity === 0 ? 'text-muted-foreground' : 'text-destructive-foreground')}`}>
-                        {val > 0 ? val : '-'}
-                      </span>
-                    </div>
-                  )
-                })}
+          {/* Charts Row 1: Pie and Line */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Pie Chart: Distribution */}
+            <div className="glass rounded-3xl p-6 shadow-lg h-72 flex flex-col">
+              <h3 className="text-sm font-black text-foreground mb-2 flex items-center gap-2">
+                <PieChartIcon size={18} className="text-primary" /> Distribuição Diária
+              </h3>
+              <div className="flex-1 w-full relative">
+                {pieData.length === 0 ? <p className="text-xs text-muted-foreground m-auto absolute inset-0 flex items-center justify-center">Sem dados de hoje.</p> : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%" cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip content={<CustomTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+            </div>
 
-      {/* Side-by-Side: Infratores vs Ranking Gamificado */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Top Infratores */}
-        <div className="bg-destructive/5 rounded-3xl border border-destructive/10 shadow-md p-6 h-full">
-          <h3 className="text-sm font-black text-destructive mb-5 flex items-center gap-2"><UserX size={18} /> Top Infratores</h3>
-          <div className="space-y-3">
-            {dashboard.topInfr.length === 0 ? <p className="text-xs text-destructive/60">Ninguém registado.</p> :
-              dashboard.topInfr.map((a, i) => (
-                <div key={i} className="flex justify-between items-center bg-card p-3 rounded-2xl border border-destructive/10 shadow-sm">
-                  <span className="text-xs font-bold text-foreground truncate pr-2"><span className="text-destructive font-black mr-1">{i + 1}º</span> {a.nome}</span>
-                  <span className="text-[9px] bg-destructive/10 text-destructive font-extrabold px-2 py-1 rounded-lg shrink-0">{a.count}</span>
+            {/* Line Chart: Trends */}
+            <div className="glass rounded-3xl p-6 shadow-lg h-72 flex flex-col">
+              <h3 className="text-sm font-black text-foreground mb-2 flex items-center gap-2">
+                <TrendingUp size={18} className="text-primary" /> Tendências (Últimos Dias)
+              </h3>
+              <div className="flex-1 w-full relative">
+                {dashboard.trendData.length === 0 ? <p className="text-xs text-muted-foreground m-auto absolute inset-0 flex items-center justify-center">Sem dados recentes.</p> : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={dashboard.trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                      <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
+                      <RechartsTooltip content={<CustomTooltip />} />
+                      <Line type="monotone" name="Saídas" dataKey="saidas" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                      <Line type="monotone" name="Ocorrências" dataKey="ocorrencias" stroke="hsl(var(--destructive))" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Behavior Chart (Top Turmas replaced with Recharts BarChart) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="glass rounded-3xl p-6 shadow-lg h-80 flex flex-col">
+              <h3 className="text-sm font-black text-foreground mb-6 flex items-center gap-2">
+                <BarChart3 size={18} className="text-primary" /> Ocorrências por Turma (Top 5)
+              </h3>
+              <div className="flex-1 w-full relative">
+                {dashboard.turmaArr.length === 0 ? <p className="text-xs text-muted-foreground m-auto absolute inset-0 flex items-center justify-center">Sem dados.</p> : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dashboard.turmaArr} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                      <XAxis dataKey="turma" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                      <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--secondary))' }} />
+                      <Bar dataKey="count" name="Ocorrências" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+
+            {/* Heatmap (Dias x Períodos) */}
+            <div className="glass rounded-3xl p-6 shadow-lg h-80 flex flex-col">
+              <h3 className="text-sm font-black text-foreground mb-6 flex items-center gap-2">
+                <Activity size={18} className="text-destructive" /> Mapa de Calor (Incidentes)
+              </h3>
+              <div className="flex-1 flex flex-col justify-center">
+                <div className="grid grid-cols-4 gap-2 text-center mb-2">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase">Dia</div>
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase">Manhã</div>
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase">Tarde</div>
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase">Noite</div>
                 </div>
-              ))}
-          </div>
-        </div>
+                {dashboard.heatmapMatrix.map(row => (
+                  <div key={row.day} className="grid grid-cols-4 gap-2 mb-2 items-center">
+                    <div className="text-xs font-black text-foreground text-center">{row.day}</div>
+                    {(['manha', 'tarde', 'noite'] as const).map(period => {
+                      const val = row[period];
+                      const intensity = dashboard.maxHeat > 0 ? val / dashboard.maxHeat : 0;
+                      const bgColor = intensity === 0 ? 'bg-secondary' : `bg-destructive`;
 
-        {/* Gamification: Ranking Turmas */}
-        <div className="bg-accent/5 rounded-3xl border border-accent/20 shadow-md p-6 relative overflow-hidden h-full">
-          <div className="absolute -top-4 -right-4 text-accent/10"><Trophy size={100} /></div>
-          <h3 className="text-sm font-black text-accent mb-2 flex items-center gap-2 relative z-10"><Medal size={18} /> Ranking de Turmas</h3>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-5 relative z-10">Conhece a Turma do Mês</p>
-
-          <div className="space-y-3 relative z-10">
-            {dashboard.rankingData.length === 0 ? <p className="text-xs text-accent/60">Sem dados suficientes.</p> :
-              dashboard.rankingData.map((a, i) => (
-                <div key={i} className={`flex justify-between items-center p-3 rounded-2xl border shadow-sm transition-all ${i === 0 ? 'bg-accent text-accent-foreground border-accent scale-105 shadow-accent/30 my-4 py-4' : 'bg-card border-accent/10 border text-foreground'
-                  }`}>
-                  <span className={`text-xs font-bold truncate pr-2 flex items-center gap-2 ${i === 0 ? 'text-sm font-black' : ''}`}>
-                    <span className="font-black opacity-70">{i + 1}º</span>
-                    {i === 0 && <Trophy size={16} className="text-yellow-300 fill-yellow-300" />} {a.turma}
-                  </span>
-                  <div className="text-right">
-                    <span className={`text-xs font-black ${i === 0 ? 'text-background' : (a.score >= 0 ? 'text-accent' : 'text-destructive')}`}>
-                      {a.score > 0 ? `+${a.score}` : a.score}
-                    </span>
-                    <span className="text-[9px] ml-1 opacity-70 uppercase tracking-widest">PTS</span>
+                      return (
+                        <div key={period}
+                          className={`h-10 rounded-xl flex items-center justify-center transition-all ${bgColor}`}
+                          style={{ opacity: intensity === 0 ? 1 : Math.max(0.3, intensity) }}>
+                          <span className={`text-xs font-bold ${intensity > 0.5 ? 'text-white' : (intensity === 0 ? 'text-muted-foreground' : 'text-destructive-foreground')}`}>
+                            {val > 0 ? val : '-'}
+                          </span>
+                        </div>
+                      )
+                    })}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Export */}
-      <div className="bg-foreground p-8 rounded-3xl text-background shadow-2xl space-y-5 relative overflow-hidden mt-8">
-        <div className="absolute top-0 right-0 p-8 opacity-5"><DatabaseBackup size={150} /></div>
-        <h3 className="text-sm font-black flex items-center gap-2.5 text-primary relative z-10"><FileSpreadsheet size={20} /> Extração de Dados</h3>
-        <div className="space-y-4 relative z-10">
-          <select className="w-full bg-background/10 text-background border border-background/20 p-4 rounded-2xl text-sm font-bold outline-none appearance-none" value={tipoExport} onChange={e => setTipoExport(e.target.value)}>
-            <option value="todos">Relatório Completo</option>
-            <option value="fechamento_mensal">Fechamento Mensal (Escola)</option>
-            <option value="lote_turma">Boletins da Turma / Lote</option>
-            <option value="ocorrencia">Apenas Ocorrências</option>
-            <option value="saida">Apenas Saídas</option>
-            <option value="atraso">Apenas Entradas Tardias</option>
-            <option value="merito">Apenas Méritos</option>
-          </select>
-          <button onClick={downloadReport}
-            className="w-full bg-primary py-4 rounded-2xl font-extrabold flex items-center justify-center gap-2 text-primary-foreground shadow-lg active:scale-[0.98] transition-all text-sm">
-            <Download size={18} /> GERAR FICHEIRO .XLS
-          </button>
-        </div>
-      </div>
+          {/* Side-by-Side: Infratores vs Ranking Gamificado */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Top Infratores */}
+            <div className="bg-destructive/5 rounded-3xl border border-destructive/10 shadow-md p-6 h-full">
+              <h3 className="text-sm font-black text-destructive mb-5 flex items-center gap-2"><UserX size={18} /> Top Infratores</h3>
+              <div className="space-y-3">
+                {dashboard.topInfr.length === 0 ? <p className="text-xs text-destructive/60">Ninguém registado.</p> :
+                  dashboard.topInfr.map((a, i) => (
+                    <div key={i} className="flex justify-between items-center bg-card p-3 rounded-2xl border border-destructive/10 shadow-sm">
+                      <span className="text-xs font-bold text-foreground truncate pr-2"><span className="text-destructive font-black mr-1">{i + 1}º</span> {a.nome}</span>
+                      <span className="text-[9px] bg-destructive/10 text-destructive font-extrabold px-2 py-1 rounded-lg shrink-0">{a.count}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Gamification: Ranking Turmas */}
+            <div className="bg-accent/5 rounded-3xl border border-accent/20 shadow-md p-6 relative overflow-hidden h-full">
+              <div className="absolute -top-4 -right-4 text-accent/10"><Trophy size={100} /></div>
+              <h3 className="text-sm font-black text-accent mb-2 flex items-center gap-2 relative z-10"><Medal size={18} /> Ranking de Turmas</h3>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-5 relative z-10">Conhece a Turma do Mês</p>
+
+              <div className="space-y-3 relative z-10">
+                {dashboard.rankingData.length === 0 ? <p className="text-xs text-accent/60">Sem dados suficientes.</p> :
+                  dashboard.rankingData.map((a, i) => (
+                    <div key={i} className={`flex justify-between items-center p-3 rounded-2xl border shadow-sm transition-all ${i === 0 ? 'bg-accent text-accent-foreground border-accent scale-105 shadow-accent/30 my-4 py-4' : 'bg-card border-accent/10 border text-foreground'
+                      }`}>
+                      <span className={`text-xs font-bold truncate pr-2 flex items-center gap-2 ${i === 0 ? 'text-sm font-black' : ''}`}>
+                        <span className="font-black opacity-70">{i + 1}º</span>
+                        {i === 0 && <Trophy size={16} className="text-yellow-300 fill-yellow-300" />} {a.turma}
+                      </span>
+                      <div className="text-right">
+                        <span className={`text-xs font-black ${i === 0 ? 'text-background' : (a.score >= 0 ? 'text-accent' : 'text-destructive')}`}>
+                          {a.score > 0 ? `+${a.score}` : a.score}
+                        </span>
+                        <span className="text-[9px] ml-1 opacity-70 uppercase tracking-widest">PTS</span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Export */}
+          <div className="bg-foreground p-8 rounded-3xl text-background shadow-2xl space-y-5 relative overflow-hidden mt-8">
+            <div className="absolute top-0 right-0 p-8 opacity-5"><DatabaseBackup size={150} /></div>
+            <h3 className="text-sm font-black flex items-center gap-2.5 text-primary relative z-10"><FileSpreadsheet size={20} /> Extração de Dados</h3>
+            <div className="space-y-4 relative z-10">
+              <select className="w-full bg-background/10 text-background border border-background/20 p-4 rounded-2xl text-sm font-bold outline-none appearance-none" value={tipoExport} onChange={e => setTipoExport(e.target.value)}>
+                <option value="todos">Relatório Completo</option>
+                <option value="fechamento_mensal">Fechamento Mensal (Escola)</option>
+                <option value="lote_turma">Boletins da Turma / Lote</option>
+                <option value="ocorrencia">Apenas Ocorrências</option>
+                <option value="saida">Apenas Saídas</option>
+                <option value="atraso">Apenas Entradas Tardias</option>
+                <option value="merito">Apenas Méritos</option>
+              </select>
+              <button onClick={downloadReport}
+                className="w-full bg-primary py-4 rounded-2xl font-extrabold flex items-center justify-center gap-2 text-primary-foreground shadow-lg active:scale-[0.98] transition-all text-sm">
+                <Download size={18} /> GERAR FICHEIRO .XLS
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
