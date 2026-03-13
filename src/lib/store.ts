@@ -228,8 +228,7 @@ export async function getHistory(): Promise<HistoryRecord[]> {
   const data = await handleResponse(
     supabase.from('history')
       .select('id, aluno_id, aluno_nome, turma, categoria, detalhe, timestamp, raw_timestamp, professor, autor_role')
-      .order('raw_timestamp', { ascending: false })
-      .limit(300),
+      .order('raw_timestamp', { ascending: false }),
     'getHistory',
     STORAGE_KEYS.CACHE_HISTORY
   ).catch(() => []);

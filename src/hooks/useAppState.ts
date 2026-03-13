@@ -118,7 +118,7 @@ export function useAppState() {
             detalhe: row.detalhe, timestamp: row.timestamp, rawTimestamp: row.raw_timestamp, professor: row.professor,
             autorRole: row.autor_role, fotoUrl: null // No photo in real-time payload anyway
           };
-          setRecords(prev => [newRecord, ...prev].sort((a, b) => b.rawTimestamp - a.rawTimestamp).slice(0, 500));
+          setRecords(prev => [newRecord, ...prev].sort((a, b) => b.rawTimestamp - a.rawTimestamp));
 
           if (newRecord.categoria === 'ocorrencia' || newRecord.categoria === 'atraso' || newRecord.categoria === 'merito' || newRecord.categoria === 'coordenação') {
             playDing();
