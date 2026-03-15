@@ -42,9 +42,7 @@ const SaidasTab: React.FC<SaidasTabProps> = ({
     try {
       const dur = elapsedMins > 0 ? elapsedMins : Math.floor((Date.now() - exit.startTime) / 60000);
       const now = new Date();
-      
-      // A CORREÇÃO ESTÁ AQUI: O banco de dados exige o formato ISO, não a string regional
-      const ts = now.toISOString(); 
+      const ts = now.toISOString();
       const raw = now.getTime();
 
       await store.addHistoryRecord({
@@ -157,7 +155,7 @@ const SaidasTab: React.FC<SaidasTabProps> = ({
               <button onClick={() => finalizeExit(overtimeModal.exit, true, overtimeModal.elapsedMinutes)}
                 className="w-full py-4 bg-destructive text-destructive-foreground rounded-2xl font-bold shadow-lg active:scale-[0.98] transition-all">
                 Registar Ocorrência
-              </button>
+               </button>
               {userRole !== 'aluno' && (
                 <button onClick={() => finalizeExit(overtimeModal.exit, false, overtimeModal.elapsedMinutes)}
                   className="w-full py-4 bg-secondary hover:bg-muted rounded-2xl font-bold text-foreground transition-colors">
@@ -353,12 +351,17 @@ const SaidasTab: React.FC<SaidasTabProps> = ({
 
           {userRole === 'admin' && (
             <div className="glass rounded-3xl p-5 shadow-lg space-y-3">
-              <textarea 
-                className="w-full p-4 bg-secondary rounded-2xl border border-border outline-none font-medium text-sm resize-none h-24"
-                placeholder="Escreva um novo aviso..."
-                value={novoAvisoTexto}
-                onChange={e => setNovoAvisoTexto(e.target.value)}
-              />
+              <textarea className="w-full p-4 bg-secondary rounded-2xl border border-border outline-none font-medium text-sm resize-none h-24 focus:bg-card focus:ring-2 focus:ring-primary/20 transition-all text-foreground"
+                placeholder="Escreva um aviso para os professores e gestão..." value={novoAvisoTexto} onChange={e => setNovoAvisoTexto(e.target.value)} />
+              <button onClick={async () => {
+                if (!novoAvisoTexto.trim()) return notify("Escreva uma mensagem.");
+                await store.addAviso({ id: store.generateId(), texto: novoAvisoTexto, autor: username, timestamp: new Date().toISOString(), rawTimestamp: Date.now() });
+                setNovoAvisoTexto('');
+                await refreshData();
+                notify("Aviso publicado!");
+              }} className="w-full py-3.5 bg-foreground text-background rounded-2xl font-bold shadow-lg active:scale-[0.98] transition-all text-xs">
+                PUBLICAR AVISO
+              </button>
             </div>
           )}
         </div>

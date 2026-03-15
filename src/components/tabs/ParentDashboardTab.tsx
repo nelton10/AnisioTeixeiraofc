@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { HistoryRecord, Aluno, LibraryItem, Aviso } from '@/types';
-import { ShieldAlert, Star, Clock, Library, History, Bell, CalendarClock, Download, FileText, UserCog, Send } from 'lucide-react';
+import { ShieldAlert, Star, Clock, Library, History, Bell, CalendarClock, Download, FileText, UserCog, Send, Trophy } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { updateAluno } from '@/lib/store';
@@ -49,7 +49,53 @@ const ParentDashboardTab: React.FC<ParentDashboardTabProps> = ({ studentName, re
         return { saidas, ocorrencias, meritos, atrasos };
     }, [childRecords]);
 
-    const recentEvents = childRecords.slice(0, 10);
+    const classStats = useMemo(() => {
+        if (!studentData?.turma) return null;
+        
+        const classRatings = records.filter(r => 
+            r.categoria === 'avaliacao_aula' && r.turma === studentData.turma
+        );
+
+        if (classRatings.length === 0) return null;
+
+        const totals = { stars: 0, starsOrg: 0, starsPart: 0, starsResp: 0 };
+        let count = 0;
+
+        classRatings.forEach(r => {
+            try {
+                const d = JSON.parse(r.detalhe);
+                const ratings = [d.stars, d.starsOrg, d.starsPart, d.starsResp].filter(val => val > 0);
+                if (ratings.length > 0) {
+                    totals.stars += d.stars || 0;
+                    totals.starsOrg += d.starsOrg || 0;
+                    totals.starsPart += d.starsPart || 0;
+                    totals.starsResp += d.starsResp || 0;
+                    count++;
+                }
+            } catch (e) {}
+        });
+
+        if (count === 0) return null;
+
+        return {
+            mediaGeral: totals.stars / count,
+            mediaOrg: totals.starsOrg / count,
+            mediaPart: totals.starsPart / count,
+            mediaResp: totals.starsResp / count,
+            count
+        };
+    }, [records, studentData?.turma]);
+
+    const recentEvents = useMemo(() => {
+        // Include child records AND class evaluations
+        const classEvals = records.filter(r => 
+            r.categoria === 'avaliacao_aula' && r.turma === studentData?.turma
+        ).map(r => ({ ...r, isClassEval: true }));
+
+        return [...childRecords, ...classEvals]
+            .sort((a, b) => (b.rawTimestamp || 0) - (a.rawTimestamp || 0))
+            .slice(0, 15);
+    }, [childRecords, records, studentData?.turma]);
 
     const handleUpdateParentInfo = async () => {
         if (!studentData) return;
@@ -184,6 +230,42 @@ const ParentDashboardTab: React.FC<ParentDashboardTabProps> = ({ studentName, re
                 </div>
             )}
 
+            {classStats && (
+                <div className="glass-strong rounded-3xl p-6 shadow-xl relative overflow-hidden mb-8 border border-warning/10">
+                    <div className="absolute -top-10 -right-10 text-warning/5 pointer-events-none"><Star size={160} fill="currentColor" /></div>
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-sm font-black flex items-center gap-2 text-foreground">
+                            <Trophy className="text-warning" size={20} fill="currentColor" /> Desempenho da Turma {studentData?.turma}
+                        </h3>
+                        <div className="text-right">
+                            <p className="text-[10px] font-black text-muted-foreground uppercase">Baseado em</p>
+                            <p className="text-xs font-black text-warning">{classStats.count} avaliações</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[
+                            { label: 'Geral', val: classStats.mediaGeral },
+                            { label: 'Organização', val: classStats.mediaOrg },
+                            { label: 'Participação', val: classStats.mediaPart },
+                            { label: 'Regras/Normas', val: classStats.mediaResp }
+                        ].map(item => (
+                            <div key={item.label} className="bg-secondary/40 p-3 rounded-2xl border border-border/50">
+                                <p className="text-[9px] font-black text-muted-foreground uppercase mb-1">{item.label}</p>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex gap-0.5">
+                                        {[1, 2, 3, 4, 5].map(s => (
+                                            <Star key={s} size={12} fill={s <= Math.round(item.val) ? 'currentColor' : 'none'} className={s <= Math.round(item.val) ? 'text-warning' : 'text-muted-foreground/20'} />
+                                        ))}
+                                    </div>
+                                    <span className="text-xs font-black text-foreground">{item.val.toFixed(1)}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
                 {/* Merits */}
                 <div className="glass rounded-3xl p-5 shadow-lg border-t-4 border-t-accent hover:-translate-y-1 transition-transform cursor-default">
@@ -239,18 +321,38 @@ const ParentDashboardTab: React.FC<ParentDashboardTabProps> = ({ studentName, re
                 ) : (
                     <div className="space-y-3">
                         {recentEvents.map(r => (
-                            <div key={r.id} className="p-4 bg-secondary/50 rounded-2xl border border-white/5 flex flex-col gap-2">
+                            <div key={r.id} className={`p-4 rounded-2xl border flex flex-col gap-2 transition-all ${
+                                (r as any).isClassEval ? 'bg-warning/5 border-warning/10 shadow-inner' : 'bg-secondary/50 border-white/5'
+                            }`}>
                                 <div className="flex justify-between items-start">
-                                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md
-                    ${r.categoria === 'merito' ? 'bg-accent/20 text-accent' :
-                                            r.categoria === 'ocorrencia' || r.categoria === 'medida' ? 'bg-destructive/20 text-destructive' :
-                                                r.categoria === 'atraso' ? 'bg-warning/20 text-warning' :
-                                                    'bg-primary/20 text-primary'}`}>
-                                        {r.categoria}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md
+                        ${r.categoria === 'merito' ? 'bg-accent/20 text-accent' :
+                                                r.categoria === 'ocorrencia' || r.categoria === 'medida' ? 'bg-destructive/20 text-destructive' :
+                                                    r.categoria === 'atraso' ? 'bg-warning/20 text-warning' :
+                                                        r.categoria === 'avaliacao_aula' ? 'bg-indigo-500/20 text-indigo-500' :
+                                                            'bg-primary/20 text-primary'}`}>
+                                            {(r as any).isClassEval ? 'Avaliação da Sala' : r.categoria}
+                                        </span>
+                                        {(r as any).isClassEval && (
+                                            <div className="flex gap-0.5">
+                                                {[1, 2, 3, 4, 5].map(s => {
+                                                    let d = { stars: 0 };
+                                                    try { d = JSON.parse(r.detalhe); } catch(e) {}
+                                                    return <Star key={s} size={10} fill={s <= d.stars ? 'currentColor' : 'none'} className={s <= d.stars ? 'text-warning' : 'text-muted-foreground/20'} />
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
                                     <span className="text-[10px] font-bold text-muted-foreground">{r.timestamp}</span>
                                 </div>
-                                <p className="text-sm font-bold text-foreground leading-snug">{r.detalhe}</p>
+                                <p className="text-sm font-bold text-foreground leading-snug">
+                                    {(r as any).isClassEval ? (
+                                        (() => {
+                                            try { return JSON.parse(r.detalhe).comment || "Sem observações."; } catch(e) { return r.detalhe; }
+                                        })()
+                                    ) : r.detalhe}
+                                </p>
                                 <div className="flex justify-between items-end mt-1">
                                     <p className="text-xs text-muted-foreground">Prof: <b>{r.professor}</b></p>
                                 </div>

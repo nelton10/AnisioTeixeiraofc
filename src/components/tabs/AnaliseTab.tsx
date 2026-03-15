@@ -32,6 +32,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, statsSummary }) => {
   const [filtroDataInicio, setFiltroDataInicio] = useState('');
   const [filtroDataFim, setFiltroDataFim] = useState('');
+  const [verTodoPeriodo, setVerTodoPeriodo] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState('');
   const [filtroBuscaNome, setFiltroBuscaNome] = useState('');
   const [tipoExport, setTipoExport] = useState('todos');
@@ -40,15 +41,18 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
     return records.filter(r => {
       if (selectedTurma && r.turma !== selectedTurma) return false;
       if (filtroBuscaNome && !r.alunoNome?.toLowerCase().includes(filtroBuscaNome.toLowerCase())) return false;
-      if (filtroDataInicio || filtroDataFim) {
-        if (!r.rawTimestamp) return false;
-        const rDate = new Date(r.rawTimestamp); rDate.setHours(0, 0, 0, 0);
-        if (filtroDataInicio) { const d = new Date(filtroDataInicio); d.setHours(0, 0, 0, 0); if (rDate < d) return false; }
-        if (filtroDataFim) { const d = new Date(filtroDataFim); d.setHours(23, 59, 59, 999); if (rDate > d) return false; }
+      
+      if (!verTodoPeriodo) {
+        if (filtroDataInicio || filtroDataFim) {
+          if (!r.rawTimestamp) return false;
+          const rDate = new Date(r.rawTimestamp); rDate.setHours(0, 0, 0, 0);
+          if (filtroDataInicio) { const d = new Date(filtroDataInicio); d.setHours(0, 0, 0, 0); if (rDate < d) return false; }
+          if (filtroDataFim) { const d = new Date(filtroDataFim); d.setHours(23, 59, 59, 999); if (rDate > d) return false; }
+        }
       }
       return true;
     });
-  }, [records, selectedTurma, filtroBuscaNome, filtroDataInicio, filtroDataFim]);
+  }, [records, selectedTurma, filtroBuscaNome, filtroDataInicio, filtroDataFim, verTodoPeriodo]);
 
   const dashboard = useMemo(() => {
     const occTypes: Record<string, number> = {};
@@ -199,15 +203,23 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
     <div className="space-y-6 pb-10 animate-fade-in">
       {/* Filters */}
       <div className="glass rounded-3xl p-6 shadow-lg space-y-5">
-        <h3 className="font-black text-sm flex items-center gap-2 text-foreground"><Search size={18} className="text-primary" /> Filtros de Análise</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-black text-sm flex items-center gap-2 text-foreground"><Search size={18} className="text-primary" /> Filtros de Análise</h3>
+          <button 
+                onClick={() => setVerTodoPeriodo(!verTodoPeriodo)}
+                className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg transition-all ${verTodoPeriodo ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}
+              >
+                {verTodoPeriodo ? 'Todo o Período: ON' : 'Todo o Período: OFF'}
+              </button>
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-2 block ml-1">Data Início</label>
-            <input type="date" className="w-full bg-secondary border border-border rounded-2xl p-4 text-sm font-semibold outline-none text-foreground" value={filtroDataInicio} onChange={e => setFiltroDataInicio(e.target.value)} />
+            <input type="date" disabled={verTodoPeriodo} className="w-full bg-secondary border border-border rounded-2xl p-4 text-sm font-semibold outline-none text-foreground disabled:opacity-50" value={filtroDataInicio} onChange={e => setFiltroDataInicio(e.target.value)} />
           </div>
           <div>
             <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-2 block ml-1">Data Fim</label>
-            <input type="date" className="w-full bg-secondary border border-border rounded-2xl p-4 text-sm font-semibold outline-none text-foreground" value={filtroDataFim} onChange={e => setFiltroDataFim(e.target.value)} />
+            <input type="date" disabled={verTodoPeriodo} className="w-full bg-secondary border border-border rounded-2xl p-4 text-sm font-semibold outline-none text-foreground disabled:opacity-50" value={filtroDataFim} onChange={e => setFiltroDataFim(e.target.value)} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -219,7 +231,7 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
         </div>
       </div>
 
-      {!filtroDataInicio || !filtroDataFim ? (
+      {(!filtroDataInicio || !filtroDataFim) && !verTodoPeriodo ? (
         <div className="glass rounded-3xl p-20 text-center space-y-4 shadow-lg">
           <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-4">
             <BarChart3 size={32} className="text-primary/20" />

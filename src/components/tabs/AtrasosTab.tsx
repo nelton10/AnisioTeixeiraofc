@@ -30,7 +30,6 @@ const AtrasosTab: React.FC<AtrasosTabProps> = ({ alunos, username, notify, refre
     if (!selectedAlunosIds.length) return notify("Selecione alunos.");
 
     notify("A registar entradas tardias...");
-    // A CORREÇÃO ESTÁ AQUI: Substituído toLocaleString por toISOString
     const ts = new Date().toISOString();
     const raw = Date.now();
 

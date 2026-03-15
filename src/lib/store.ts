@@ -57,7 +57,12 @@ export async function syncOfflineQueue() {
       else if (mut.action === 'deleteIn') await query.delete().in(mut.matchField!, mut.matchValue);
       syncedCount++;
     } catch (e: any) {
-      remaining.push(mut);
+      const errorMsg = e.message || "";
+      if (errorMsg.includes('date/time field value out of range') || errorMsg.includes('invalid input syntax for type timestamp')) {
+        console.error("Discarding invalid mutation due to format error:", errorMsg, mut);
+      } else {
+        remaining.push(mut);
+      }
     }
   }
 

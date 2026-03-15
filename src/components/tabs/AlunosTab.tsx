@@ -85,7 +85,7 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records
                 alunoNome: suspendAlunoModal.nome,
                 turma: suspendAlunoModal.turma,
                 returnDate: suspendReturnDate,
-                timestamp: new Date().toLocaleString('pt-PT')
+                timestamp: new Date().toISOString()
             });
             setSuspendAlunoModal(null);
             setSuspendReturnDate('');
