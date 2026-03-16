@@ -14,6 +14,7 @@ import AdminTab from '@/components/tabs/AdminTab';
 import AlunosTab from '@/components/tabs/AlunosTab';
 import AnaliseAulaTab from '@/components/tabs/AnaliseAulaTab';
 import ParentDashboardTab from '@/components/tabs/ParentDashboardTab';
+import FrequenciaTab from '@/components/tabs/FrequenciaTab';
 
 const Index = () => {
   const state = useAppState();
@@ -99,6 +100,18 @@ const Index = () => {
             )}
             {state.activeTab === 'pesquisa' && (
               <PesquisaTab alunos={state.alunos} records={state.records} turmasExistentes={state.turmasExistentes} refreshHistory={state.refreshHistory} />
+            )}
+            {state.activeTab === 'frequencia' && (
+              <FrequenciaTab 
+                alunos={state.alunos} 
+                records={state.records} 
+                turmasExistentes={state.turmasExistentes}
+                username={state.authState.username}
+                userRole={state.authState.role}
+                notify={state.notify}
+                refreshData={state.refreshData}
+                refreshHistory={state.refreshHistory}
+              />
             )}
             {state.activeTab === 'avaliar_aula' && (
               <AnaliseAulaTab records={state.records} turmasExistentes={state.turmasExistentes}

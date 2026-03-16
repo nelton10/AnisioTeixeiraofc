@@ -33,7 +33,7 @@ export interface HistoryRecord {
   alunoId: string;
   alunoNome: string;
   turma: string;
-  categoria: 'saida' | 'ocorrencia' | 'merito' | 'atraso' | 'coordenação' | 'medida' | 'avaliacao_aula';
+  categoria: 'saida' | 'ocorrencia' | 'merito' | 'atraso' | 'coordenação' | 'medida' | 'avaliacao_aula' | 'frequencia';
   detalhe: string;
   timestamp: string;
   rawTimestamp: number;
@@ -94,4 +94,18 @@ export interface AuthState {
   username: string;
   role: UserRole;
   linkedStudentName?: string;
+}
+
+export interface Frequencia {
+  id: string;
+  alunoId: string;
+  alunoNome: string;
+  turma: string;
+  data: string;
+  period: '8h' | '14h';
+  status: 'P' | 'A';
+  justificativa?: string;
+  professor?: string;
+  timestamp: string;
+  rawTimestamp: number;
 }

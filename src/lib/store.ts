@@ -12,7 +12,8 @@ const STORAGE_KEYS = {
   CACHE_COORD: 'cache_coord',
   CACHE_LIB: 'cache_lib',
   CACHE_SUSP: 'cache_susp',
-  CACHE_AVISOS: 'cache_avisos'
+  CACHE_AVISOS: 'cache_avisos',
+  CACHE_FREQ: 'cache_frequencias'
 } as const;
 
 export function generateId(): string {
@@ -282,6 +283,14 @@ export async function addHistoryRecord(record: HistoryRecord) {
   );
 }
 
+export async function upsertHistoryRecord(record: HistoryRecord) {
+  const dbRecord = { id: record.id, aluno_id: record.alunoId, aluno_nome: record.alunoNome, turma: record.turma, categoria: record.categoria, detalhe: record.detalhe, timestamp: record.timestamp, raw_timestamp: record.rawTimestamp, professor: record.professor, autor_role: record.autorRole, foto_url: record.fotoUrl };
+  await executeMutation(
+    { table: 'history', action: 'update', payload: dbRecord, matchField: 'id', matchValue: record.id },
+    () => handleResponse(supabase.from('history').upsert(dbRecord), 'upsertHistoryRecord')
+  );
+}
+
 export async function updateHistoryRecord(id: string, data: Partial<HistoryRecord>) {
   const dbData: any = { ...data };
   if (data.alunoId) dbData.aluno_id = data.alunoId; if (data.alunoNome) dbData.aluno_nome = data.alunoNome;
@@ -292,6 +301,70 @@ export async function updateHistoryRecord(id: string, data: Partial<HistoryRecor
   await executeMutation(
     { table: 'history', action: 'update', payload: dbData, matchField: 'id', matchValue: id },
     () => handleResponse(supabase.from('history').update(dbData).eq('id', id), 'updateHistoryRecord')
+  );
+}
+
+// ----------------- FREQUENCIAS (ATTENDANCE) -----------------
+
+export async function getFrequenciasByDate(date: string): Promise<any[]> {
+  const cacheKey = `${STORAGE_KEYS.CACHE_FREQ}_${date}`;
+  const data = await handleResponse(
+    supabase.from('frequencias').select('*').eq('data', date),
+    'getFrequenciasByDate',
+    cacheKey
+  ).catch(async () => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem(cacheKey);
+      return cached ? JSON.parse(cached) : [];
+    }
+    return [];
+  });
+
+  return (data || []).map((r: any) => ({
+    id: r.id, alunoId: r.aluno_id, alunoNome: r.aluno_nome, turma: r.turma, data: r.data,
+    period: r.period, status: r.status, justificativa: r.justificativa, professor: r.professor,
+    timestamp: r.timestamp, rawTimestamp: r.raw_timestamp
+  }));
+}
+
+export async function getFrequenciasByRange(start: string, end: string, turma?: string): Promise<any[]> {
+  const cacheKey = `${STORAGE_KEYS.CACHE_FREQ}_range_${start}_${end}_${turma || 'all'}`;
+  let query = supabase.from('frequencias').select('*').gte('data', start).lte('data', end);
+  if (turma) query = query.eq('turma', turma);
+
+  const data = await handleResponse(query, 'getFrequenciasByRange', cacheKey).catch(async () => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem(cacheKey);
+      return cached ? JSON.parse(cached) : [];
+    }
+    return [];
+  });
+
+  return (data || []).map((r: any) => ({
+    id: r.id, alunoId: r.aluno_id, alunoNome: r.aluno_nome, turma: r.turma, data: r.data,
+    period: r.period, status: r.status, justificativa: r.justificativa, professor: r.professor,
+    timestamp: r.timestamp, rawTimestamp: r.raw_timestamp
+  }));
+}
+
+export async function upsertFrequencia(freq: any) {
+  const dbItem = {
+    id: freq.id,
+    aluno_id: freq.alunoId,
+    aluno_nome: freq.alunoNome,
+    turma: freq.turma,
+    data: freq.data,
+    period: freq.period,
+    status: freq.status,
+    justificativa: freq.justificativa || '',
+    professor: freq.professor,
+    timestamp: freq.timestamp,
+    raw_timestamp: freq.rawTimestamp
+  };
+
+  await executeMutation(
+    { table: 'frequencias', action: 'update', payload: dbItem, matchField: 'id', matchValue: freq.id },
+    () => handleResponse(supabase.from('frequencias').upsert(dbItem), 'upsertFrequencia')
   );
 }
 

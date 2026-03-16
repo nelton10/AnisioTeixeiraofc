@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { GraduationCap, ArrowRight, Library, Gavel, AlertOctagon, CheckCircle2, Camera, X, Bell, ShieldAlert, CalendarClock, Send } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { GraduationCap, ArrowRight, Library, Gavel, AlertOctagon, CheckCircle2, Camera, X, Bell, ShieldAlert, CalendarClock, Send, UserX, Search } from 'lucide-react';
 import * as store from '@/lib/store';
 import { CoordinationItem, Suspension, UserRole, Aviso, HistoryRecord, Aluno } from '@/types';
 
@@ -23,6 +23,12 @@ const CoordTab: React.FC<CoordTabProps> = ({ coordinationQueue, suspensions, avi
   const [endSuspensionObs, setEndSuspensionObs] = useState('');
   const [fotoViewer, setFotoViewer] = useState<string | null>(null);
   const [novoAviso, setNovoAviso] = useState('');
+  const [absentRangeStart, setAbsentRangeStart] = useState(new Date().toISOString().split('T')[0]);
+  const [absentRangeEnd, setAbsentRangeEnd] = useState(new Date().toISOString().split('T')[0]);
+  const [absentRangeTurma, setAbsentRangeTurma] = useState('');
+  const [rangeFrequencias, setRangeFrequencias] = useState<any[]>([]);
+  const [isRangeLoading, setIsRangeLoading] = useState(false);
+  const [frequenciasHoje, setFrequenciasHoje] = useState<any[]>([]);
 
   // Early Warning System Logic
   const warnings = useMemo(() => {
@@ -44,6 +50,67 @@ const CoordTab: React.FC<CoordTabProps> = ({ coordinationQueue, suspensions, avi
     const activeWarnings = Object.values(countMap).filter(c => c.atrasos >= 3 || c.ocorrencias >= 3);
     return activeWarnings;
   }, [records]);
+
+  // Students absent today
+  const faltososHoje = useMemo(() => {
+    const absentDetails: Record<string, { nome: string, turma: string, periods: string[] }> = {};
+
+    frequenciasHoje.forEach(f => {
+      if (f.status === 'A') {
+        if (!absentDetails[f.alunoId]) {
+          absentDetails[f.alunoId] = { nome: f.alunoNome, turma: f.turma, periods: [] };
+        }
+        if (!absentDetails[f.alunoId].periods.includes(f.period)) {
+          absentDetails[f.alunoId].periods.push(f.period);
+        }
+      }
+    });
+
+    return Object.values(absentDetails).sort((a, b) => a.turma.localeCompare(b.turma) || a.nome.localeCompare(b.nome));
+  }, [frequenciasHoje]);
+
+  const loadRangeFrequencias = async () => {
+    setIsRangeLoading(true);
+    try {
+      const data = await store.getFrequenciasByRange(absentRangeStart, absentRangeEnd, absentRangeTurma);
+      setRangeFrequencias(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsRangeLoading(false);
+    }
+  };
+
+  const loadFrequencias = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const data = await store.getFrequenciasByDate(today);
+      setFrequenciasHoje(data);
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => {
+    loadRangeFrequencias();
+    loadFrequencias();
+  }, [absentRangeStart, absentRangeEnd, absentRangeTurma]); // Removed selectedDate as it's not defined
+
+  const rangeFaltosos = useMemo(() => {
+    const absentDetails: Record<string, { nome: string, turma: string, count: number, dates: string[] }> = {};
+
+    rangeFrequencias.forEach(f => {
+      if (f.status === 'A') {
+        if (!absentDetails[f.alunoId]) {
+          absentDetails[f.alunoId] = { nome: f.alunoNome, turma: f.turma, count: 0, dates: [] };
+        }
+        absentDetails[f.alunoId].count++;
+        if (!absentDetails[f.alunoId].dates.includes(f.data)) {
+          absentDetails[f.alunoId].dates.push(f.data);
+        }
+      }
+    });
+
+    return Object.values(absentDetails).sort((a, b) => b.count - a.count || a.nome.localeCompare(b.nome));
+  }, [rangeFrequencias]);
 
   const handlePostAviso = async () => {
     if (!novoAviso.trim()) return;
@@ -238,6 +305,95 @@ const CoordTab: React.FC<CoordTabProps> = ({ coordinationQueue, suspensions, avi
                   className="w-full py-3 bg-destructive text-destructive-foreground rounded-xl text-[11px] font-bold shadow-md active:scale-95 transition-all flex justify-center items-center gap-1.5">
                   <CheckCircle2 size={16} /> Finalizar e Libertar Acesso
                 </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Alunos Faltosos do Dia */}
+      <div className="glass rounded-3xl p-6 shadow-lg mb-6 border border-destructive/20 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><UserX size={80} /></div>
+        <h3 className="font-black text-lg flex items-center gap-2 mb-4 text-foreground relative z-10">
+          <div className="bg-destructive/10 text-destructive p-2.5 rounded-xl"><UserX size={20} strokeWidth={2.5} /></div> Faltosos do Dia
+        </h3>
+        
+        {faltososHoje.length === 0 ? (
+          <p className="text-center py-8 text-muted-foreground font-bold bg-secondary/30 rounded-2xl border border-dashed border-border text-xs">Sem faltas registradas hoje.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10">
+            {faltososHoje.map((f, i) => (
+              <div key={i} className="flex justify-between items-center p-3 bg-card border border-destructive/10 rounded-2xl hover:border-destructive/30 transition-all shadow-sm">
+                <div>
+                  <p className="text-sm font-black text-foreground leading-tight">{f.nome}</p>
+                  <p className="text-[10px] font-extrabold uppercase text-muted-foreground mt-0.5">{f.turma}</p>
+                </div>
+                <div className="flex gap-1">
+                  {f.periods.sort().map(p => (
+                    <span key={p} className="text-[9px] font-black bg-destructive/10 text-destructive px-2 py-0.5 rounded-md uppercase">
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Lupa de Faltas por Período */}
+      <div className="glass rounded-3xl p-6 shadow-lg mb-6 border border-primary/20 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><Search size={80} /></div>
+        <h3 className="font-black text-lg flex items-center gap-2 mb-6 text-foreground relative z-10">
+          <div className="bg-primary/10 text-primary p-2.5 rounded-xl"><CalendarClock size={20} strokeWidth={2.5} /></div> Relatório de Frequência
+        </h3>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 relative z-10">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Início</label>
+            <input type="date" value={absentRangeStart} onChange={e => setAbsentRangeStart(e.target.value)}
+              className="p-3 bg-secondary rounded-xl border border-border outline-none text-xs font-bold" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Fim</label>
+            <input type="date" value={absentRangeEnd} onChange={e => setAbsentRangeEnd(e.target.value)}
+              className="p-3 bg-secondary rounded-xl border border-border outline-none text-xs font-bold" />
+          </div>
+          <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-2">
+            <label className="text-[9px] font-black uppercase text-muted-foreground ml-1">Turma</label>
+            <select value={absentRangeTurma} onChange={e => setAbsentRangeTurma(e.target.value)}
+              className="p-3 bg-secondary rounded-xl border border-border outline-none text-xs font-bold">
+              <option value="">Todas as Turmas</option>
+              {[...new Set(alunos.map(a => a.turma))].sort().map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {isRangeLoading ? (
+          <div className="py-12 flex justify-center"><div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" /></div>
+        ) : rangeFaltosos.length === 0 ? (
+          <p className="text-center py-10 text-muted-foreground font-bold bg-secondary/30 rounded-2xl border border-dashed border-border text-xs">Nenhuma falta encontrada no período.</p>
+        ) : (
+          <div className="space-y-2 relative z-10">
+            {rangeFaltosos.map((f, i) => (
+              <div key={i} className="flex justify-between items-center p-3.5 bg-card border border-border rounded-2xl hover:bg-secondary/20 transition-all">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 flex items-center justify-center rounded-lg font-black text-xs ${f.count >= 5 ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
+                    {f.count}
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-foreground">{f.nome}</p>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">{f.turma} • {f.dates.length} dias distintos</p>
+                  </div>
+                </div>
+                <div className="flex -space-x-1.5 overflow-hidden">
+                  {f.dates.slice(0, 3).map((d, id) => (
+                    <div key={id} className="w-6 h-6 rounded-full bg-secondary border-2 border-card flex items-center justify-center text-[8px] font-black">
+                      {d.split('-')[2]}
+                    </div>
+                  ))}
+                  {f.dates.length > 3 && <div className="w-6 h-6 rounded-full bg-primary/20 border-2 border-card flex items-center justify-center text-[8px] font-black text-primary">+{f.dates.length - 3}</div>}
+                </div>
               </div>
             ))}
           </div>

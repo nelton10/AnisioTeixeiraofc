@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Activity, UserX, BarChart3, FileSpreadsheet, Download, DatabaseBackup, PieChart as PieChartIcon, TrendingUp, Trophy, Medal } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, Activity, UserX, BarChart3, FileSpreadsheet, Download, DatabaseBackup, PieChart as PieChartIcon, TrendingUp, Trophy, Medal, CalendarClock } from 'lucide-react';
+import * as store from '@/lib/store';
 import { HistoryRecord } from '@/types';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -36,6 +37,12 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
   const [selectedTurma, setSelectedTurma] = useState('');
   const [filtroBuscaNome, setFiltroBuscaNome] = useState('');
   const [tipoExport, setTipoExport] = useState('todos');
+  const [absentRangeStart, setAbsentRangeStart] = useState(new Date().toISOString().split('T')[0]);
+  const [absentRangeEnd, setAbsentRangeEnd] = useState(new Date().toISOString().split('T')[0]);
+  const [absentRangeTurma, setAbsentRangeTurma] = useState('');
+  const [rangeFrequencias, setRangeFrequencias] = useState<any[]>([]);
+  const [isRangeLoading, setIsRangeLoading] = useState(false);
+  const [frequenciasHoje, setFrequenciasHoje] = useState<any[]>([]);
 
   const filteredHistory = useMemo(() => {
     return records.filter(r => {
@@ -129,6 +136,66 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
 
     return { occArr, maxOcc: occArr[0]?.count || 1, topInfr, turmaArr, trendData, rankingData, heatmapMatrix, maxHeat };
   }, [filteredHistory]);
+
+  const loadTodayFrequencias = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const data = await store.getFrequenciasByDate(today);
+      setFrequenciasHoje(data);
+    } catch (e) { console.error(e); }
+  };
+
+  const loadRangeFrequencias = async () => {
+    setIsRangeLoading(true);
+    try {
+      const data = await store.getFrequenciasByRange(absentRangeStart, absentRangeEnd, absentRangeTurma || selectedTurma);
+      setRangeFrequencias(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsRangeLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadRangeFrequencias();
+    loadTodayFrequencias();
+  }, [absentRangeStart, absentRangeEnd, absentRangeTurma, selectedTurma]);
+
+  const rangeFaltosos = useMemo(() => {
+    const absentDetails: Record<string, { nome: string, turma: string, count: number, dates: string[] }> = {};
+
+    rangeFrequencias.forEach(f => {
+      if (f.status === 'A') {
+        if (!absentDetails[f.alunoId]) {
+          absentDetails[f.alunoId] = { nome: f.alunoNome, turma: f.turma, count: 0, dates: [] };
+        }
+        absentDetails[f.alunoId].count++;
+        if (!absentDetails[f.alunoId].dates.includes(f.data)) {
+          absentDetails[f.alunoId].dates.push(f.data);
+        }
+      }
+    });
+
+    return Object.values(absentDetails).sort((a, b) => b.count - a.count || a.nome.localeCompare(b.nome));
+  }, [rangeFrequencias]);
+
+  const faltososHoje = useMemo(() => {
+    const absentDetails: Record<string, { nome: string, turma: string, periods: string[] }> = {};
+
+    frequenciasHoje.forEach(f => {
+      if (f.status === 'A') {
+        if (!absentDetails[f.alunoId]) {
+          absentDetails[f.alunoId] = { nome: f.alunoNome, turma: f.turma, periods: [] };
+        }
+        if (!absentDetails[f.alunoId].periods.includes(f.period)) {
+          absentDetails[f.alunoId].periods.push(f.period);
+        }
+      }
+    });
+
+    return Object.values(absentDetails).sort((a, b) => a.turma.localeCompare(b.turma) || a.nome.localeCompare(b.nome));
+  }, [frequenciasHoje]);
 
   const downloadReport = () => {
     if (!records.length) return;
@@ -258,6 +325,32 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
               <p className="text-[10px] font-extrabold text-primary-foreground/70 uppercase tracking-widest mb-1.5">No Filtro</p>
               <p className="text-3xl font-black text-primary-foreground">{ocorrenciasPeriodo}</p>
             </div>
+          </div>
+
+          {/* Alunos Faltosos Hoje Section */}
+          <div className="bg-destructive/5 rounded-3xl border border-destructive/10 p-6 shadow-sm">
+            <h3 className="text-sm font-black text-destructive mb-4 flex items-center gap-2">
+              <UserX size={18} /> Alunos Faltosos Hoje ({faltososHoje.length})
+            </h3>
+            {faltososHoje.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">Todas as turmas completas ou sem registro de faltas hoje.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {faltososHoje.map((f, i) => (
+                  <div key={i} className="px-3 py-1.5 bg-card border border-destructive/10 rounded-xl flex items-center gap-2 shadow-sm">
+                    <span className="text-[11px] font-extrabold text-foreground">{f.nome}</span>
+                    <span className="text-[9px] font-black text-destructive bg-destructive/5 px-1.5 py-0.5 rounded-lg uppercase">{f.turma}</span>
+                    {f.periods.length > 0 && (
+                      <div className="flex gap-0.5">
+                        {f.periods.sort().map(p => (
+                          <span key={p} className="text-[8px] font-black text-muted-foreground">{p}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Charts Row 1: Pie and Line */}
@@ -411,6 +504,72 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, stat
                   ))}
               </div>
             </div>
+          </div>
+
+          {/* Relatório de Faltas por Período */}
+          <div className="glass rounded-3xl p-6 shadow-lg border border-destructive/20 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><CalendarClock size={100} /></div>
+            <h3 className="font-black text-sm text-destructive uppercase tracking-widest flex items-center gap-2 mb-6 relative z-10">
+              <CalendarClock size={18} /> Relatório de Faltas por Período
+            </h3>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6 relative z-10">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Data Inicial</label>
+                <input type="date" value={absentRangeStart} onChange={e => setAbsentRangeStart(e.target.value)}
+                  className="w-full p-3.5 bg-secondary rounded-2xl border border-border text-xs font-bold outline-none" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Data Final</label>
+                <input type="date" value={absentRangeEnd} onChange={e => setAbsentRangeEnd(e.target.value)}
+                  className="w-full p-3.5 bg-secondary rounded-2xl border border-border text-xs font-bold outline-none" />
+              </div>
+              <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Filtrar Turma</label>
+                <select value={absentRangeTurma} onChange={e => setAbsentRangeTurma(e.target.value)}
+                  className="w-full p-3.5 bg-secondary rounded-2xl border border-border text-xs font-bold outline-none">
+                  <option value="">Todas</option>
+                  {turmasExistentes.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {isRangeLoading ? (
+              <div className="py-16 flex justify-center"><div className="w-10 h-10 border-4 border-destructive/20 border-t-destructive rounded-full animate-spin" /></div>
+            ) : rangeFaltosos.length === 0 ? (
+              <div className="py-16 text-center bg-secondary/30 rounded-3xl border-2 border-dashed border-border">
+                <p className="text-xs font-bold text-muted-foreground">Nenhuma falta registrada neste intervalo.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 relative z-10">
+                {rangeFaltosos.map((f, i) => (
+                  <div key={i} className="flex justify-between items-center p-4 bg-card border border-destructive/10 rounded-2xl hover:border-destructive/30 transition-all shadow-sm group">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 flex flex-col items-center justify-center rounded-xl font-black ${f.count >= 5 ? 'bg-destructive text-white shadow-lg shadow-destructive/20' : 'bg-destructive/10 text-destructive'}`}>
+                        <span className="text-sm">{f.count}</span>
+                        <span className="text-[7px] uppercase -mt-1">faltas</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-foreground group-hover:text-destructive transition-colors">{f.nome}</p>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase">{f.turma} • {f.dates.length} dias</p>
+                      </div>
+                    </div>
+                    <div className="flex -space-x-2">
+                       {f.dates.slice(-3).reverse().map((d, id) => (
+                         <div key={id} className="w-7 h-7 rounded-full bg-secondary border-2 border-card flex items-center justify-center text-[9px] font-black text-muted-foreground shadow-sm">
+                           {d.split('-')[2]}
+                         </div>
+                       ))}
+                       {f.dates.length > 3 && (
+                         <div className="w-7 h-7 rounded-full bg-destructive/10 border-2 border-card flex items-center justify-center text-[9px] font-black text-destructive">
+                           +{f.dates.length - 3}
+                         </div>
+                       )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Export */}
