@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { CheckSquare, Search, AlertTriangle, Save, UserCheck, Users, Sun, Moon, Download, FileSpreadsheet } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { CheckSquare, Search, AlertTriangle, Save, UserCheck, Users, Sun, Moon, Download, FileSpreadsheet, FileText } from 'lucide-react';
 import * as store from '@/lib/store';
 import { Aluno, HistoryRecord, UserRole } from '@/types';
 
@@ -269,41 +271,53 @@ const FrequenciaTab: React.FC<FrequenciaTabProps> = ({
   const generateExcel = async () => {
     if (!selectedTurma) return notify("Selecione uma turma para exportar.");
     setIsExporting(true);
-    notify("Gerando Excel por período...");
+    notify("Gerando Excel com estatísticas...");
 
     try {
-      // 1. Fetch data for the range
       const rangeData = await store.getFrequenciasByRange(exportStartDate, exportEndDate, selectedTurma);
-      
-      // 2. Filter for 8h and group by student and date
-      // We want a list of dates in the range
       const dates = [...new Set(rangeData.map(f => f.data))].sort();
-      
-      // Group by student
-      const studentMap: Record<string, Record<string, string>> = {};
+      const studentMap: Record<string, { attendance: Record<string, string>, presencas: number, faltas: number }> = {};
       
       rangeData.forEach(f => {
         if (f.period === '8h') {
-          if (!studentMap[f.alunoNome]) studentMap[f.alunoNome] = {};
-          studentMap[f.alunoNome][f.data] = f.status === 'P' ? 'P' : f.status === 'A' ? 'F' : '-';
+          if (!studentMap[f.alunoNome]) studentMap[f.alunoNome] = { attendance: {}, presencas: 0, faltas: 0 };
+          const status = f.status === 'P' ? 'P' : f.status === 'A' ? 'F' : '-';
+          studentMap[f.alunoNome].attendance[f.data] = status;
+          if (status === 'P') studentMap[f.alunoNome].presencas++;
+          if (status === 'F') studentMap[f.alunoNome].faltas++;
         }
       });
 
-      // 3. Create JSON data for XLSX
-      const exportData = filteredAlunos.map(aluno => {
-        const row: any = {
-          'Aluno': aluno.nome,
-          'Turma': aluno.turma,
-        };
-        
-        dates.forEach(date => {
-          row[date] = studentMap[aluno.nome]?.[date] || '-';
-        });
-        
-        return row;
+      // 1. Create Summary Section (Search/Lookup area)
+      const summaryRows = [
+        ['RESUMO DE FREQUÊNCIA - TURMA: ' + selectedTurma],
+        ['Período:', exportStartDate, 'até', exportEndDate],
+        [''],
+        ['PESQUISA DE ALUNO (Digite o nome abaixo):'],
+        ['Nome do Aluno', 'Total Presenças', 'Total Faltas'],
+        ['', { f: 'VLOOKUP(A6, A10:ZZ500, ' + (dates.length + 3) + ', FALSE)' }, { f: 'VLOOKUP(A6, A10:ZZ500, ' + (dates.length + 4) + ', FALSE)' }],
+        [''],
+        ['LISTAGEM GERAL:'],
+      ];
+
+      // 2. Create Grid Header
+      const headerRow = ['Aluno', 'Turma', ...dates, 'Total Presenças', 'Total Faltas'];
+      
+      // 3. Create Grid Data
+      const gridRows = filteredAlunos.map(aluno => {
+        const stats = studentMap[aluno.nome] || { attendance: {}, presencas: 0, faltas: 0 };
+        return [
+          aluno.nome,
+          aluno.turma,
+          ...dates.map(date => stats.attendance[date] || '-'),
+          stats.presencas,
+          stats.faltas
+        ];
       });
 
-      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wsData = [...summaryRows, headerRow, ...gridRows];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Frequência 8h");
       XLSX.writeFile(wb, `Frequencia_8h_${selectedTurma}_${exportStartDate}_${exportEndDate}.xlsx`);
@@ -311,6 +325,64 @@ const FrequenciaTab: React.FC<FrequenciaTabProps> = ({
     } catch (error) {
       console.error(error);
       notify("Erro ao gerar Excel.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const generatePDF = async () => {
+    if (!selectedTurma) return notify("Selecione uma turma para exportar.");
+    setIsExporting(true);
+    notify("Gerando PDF...");
+
+    try {
+      const rangeData = await store.getFrequenciasByRange(exportStartDate, exportEndDate, selectedTurma);
+      const dates = [...new Set(rangeData.map(f => f.data))].sort();
+      const studentMap: Record<string, { attendance: Record<string, string>, presencas: number, faltas: number }> = {};
+      
+      rangeData.forEach(f => {
+        if (f.period === '8h') {
+          if (!studentMap[f.alunoNome]) studentMap[f.alunoNome] = { attendance: {}, presencas: 0, faltas: 0 };
+          const status = f.status === 'P' ? 'P' : f.status === 'A' ? 'F' : '-';
+          studentMap[f.alunoNome].attendance[f.data] = status;
+          if (status === 'P') studentMap[f.alunoNome].presencas++;
+          if (status === 'F') studentMap[f.alunoNome].faltas++;
+        }
+      });
+
+      const doc = new jsPDF('l', 'mm', 'a4');
+      const title = `Frequência 8h - Turma: ${selectedTurma}`;
+      const subtitle = `Período: ${exportStartDate} a ${exportEndDate}`;
+      
+      doc.setFontSize(16);
+      doc.text(title, 14, 15);
+      doc.setFontSize(10);
+      doc.text(subtitle, 14, 22);
+
+      const tableHeader = ['Aluno', ...dates.map(d => d.split('-').slice(1).join('/')), 'Pres.', 'Faltas'];
+      const tableData = filteredAlunos.map(aluno => {
+        const stats = studentMap[aluno.nome] || { attendance: {}, presencas: 0, faltas: 0 };
+        return [
+          aluno.nome,
+          ...dates.map(date => stats.attendance[date] || '-'),
+          stats.presencas,
+          stats.faltas
+        ];
+      });
+
+      autoTable(doc, {
+        head: [tableHeader],
+        body: tableData,
+        startY: 30,
+        styles: { fontSize: 7, cellPadding: 1 },
+        headStyles: { fillColor: [34, 197, 94] },
+      });
+
+      doc.save(`Frequencia_8h_${selectedTurma}_${exportStartDate}_${exportEndDate}.pdf`);
+      notify("PDF baixado com sucesso!");
+    } catch (error) {
+      console.error(error);
+      notify("Erro ao gerar PDF.");
     } finally {
       setIsExporting(false);
     }
@@ -347,14 +419,24 @@ const FrequenciaTab: React.FC<FrequenciaTabProps> = ({
                  <input type="date" value={exportEndDate} onChange={e => setExportEndDate(e.target.value)} 
                    className="bg-transparent text-[10px] font-bold outline-none w-28" title="Data Final para Exportação" />
                </div>
-               <button 
-                 onClick={generateExcel}
-                 disabled={!selectedTurma || isExporting}
-                 className="flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-xl text-xs font-black hover:bg-green-700 transition-all disabled:opacity-50 shadow-lg shadow-green-600/20"
-               >
-                 {isExporting ? <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <FileSpreadsheet size={14} />}
-                 EXPORTAR 8H (PERÍODO)
-               </button>
+               <div className="flex gap-2">
+                 <button 
+                   onClick={generateExcel}
+                   disabled={!selectedTurma || isExporting}
+                   className="flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-xl text-xs font-black hover:bg-green-700 transition-all disabled:opacity-50 shadow-lg shadow-green-600/20"
+                 >
+                   {isExporting ? <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <FileSpreadsheet size={14} />}
+                   EXCEL
+                 </button>
+                 <button 
+                   onClick={generatePDF}
+                   disabled={!selectedTurma || isExporting}
+                   className="flex items-center gap-2 px-6 py-2.5 bg-red-600 text-white rounded-xl text-xs font-black hover:bg-red-700 transition-all disabled:opacity-50 shadow-lg shadow-red-600/20"
+                 >
+                   {isExporting ? <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <FileText size={14} />}
+                   PDF
+                 </button>
+               </div>
             </div>
           )}
         </div>
