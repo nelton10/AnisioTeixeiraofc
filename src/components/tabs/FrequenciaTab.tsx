@@ -39,6 +39,9 @@ const FrequenciaTab: React.FC<FrequenciaTabProps> = ({
   const [dbFrequencias, setDbFrequencias] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [exportEndDate, setExportEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isExporting, setIsExporting] = useState(false);
 
   const isToday = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -263,36 +266,53 @@ const FrequenciaTab: React.FC<FrequenciaTabProps> = ({
     }
   };
 
-  const generateExcel = () => {
-    if (!selectedTurma) return;
-    notify("Gerando Excel...");
+  const generateExcel = async () => {
+    if (!selectedTurma) return notify("Selecione uma turma para exportar.");
+    setIsExporting(true);
+    notify("Gerando Excel por período...");
 
     try {
-      const data = filteredAlunos.map(aluno => {
-        const state = localAttendance[aluno.id] || { 
-          '8h': { status: '-', justification: '' }, 
-          '14h': { status: '-', justification: '' } 
-        };
-        
-        return {
-          'Aluno': aluno.nome,
-          'Turma': aluno.turma,
-          'Data': selectedDate,
-          'Status 8h': state['8h'].status === 'P' ? 'Presente' : state['8h'].status === 'A' ? 'Ausente' : '-',
-          'Just. 8h': state['8h'].justification || '',
-          'Status 14h': state['14h'].status === 'P' ? 'Presente' : state['14h'].status === 'A' ? 'Ausente' : '-',
-          'Just. 14h': state['14h'].justification || ''
-        };
+      // 1. Fetch data for the range
+      const rangeData = await store.getFrequenciasByRange(exportStartDate, exportEndDate, selectedTurma);
+      
+      // 2. Filter for 8h and group by student and date
+      // We want a list of dates in the range
+      const dates = [...new Set(rangeData.map(f => f.data))].sort();
+      
+      // Group by student
+      const studentMap: Record<string, Record<string, string>> = {};
+      
+      rangeData.forEach(f => {
+        if (f.period === '8h') {
+          if (!studentMap[f.alunoNome]) studentMap[f.alunoNome] = {};
+          studentMap[f.alunoNome][f.data] = f.status === 'P' ? 'P' : f.status === 'A' ? 'F' : '-';
+        }
       });
 
-      const ws = XLSX.utils.json_to_sheet(data);
+      // 3. Create JSON data for XLSX
+      const exportData = filteredAlunos.map(aluno => {
+        const row: any = {
+          'Aluno': aluno.nome,
+          'Turma': aluno.turma,
+        };
+        
+        dates.forEach(date => {
+          row[date] = studentMap[aluno.nome]?.[date] || '-';
+        });
+        
+        return row;
+      });
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Frequência");
-      XLSX.writeFile(wb, `Frequencia_${selectedTurma}_${selectedDate}.xlsx`);
+      XLSX.utils.book_append_sheet(wb, ws, "Frequência 8h");
+      XLSX.writeFile(wb, `Frequencia_8h_${selectedTurma}_${exportStartDate}_${exportEndDate}.xlsx`);
       notify("Excel baixado com sucesso!");
     } catch (error) {
       console.error(error);
       notify("Erro ao gerar Excel.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -318,13 +338,24 @@ const FrequenciaTab: React.FC<FrequenciaTabProps> = ({
           </div>
 
           {(userRole === 'admin' || userRole === 'professor') && (
-            <button 
-              onClick={generateExcel}
-              disabled={!selectedTurma}
-              className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-xl text-xs font-black hover:bg-green-700 transition-all disabled:opacity-50 shadow-lg shadow-green-600/20"
-            >
-              <FileSpreadsheet size={14} /> EXPORTAR EXCEL
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+               <div className="flex items-center gap-2 bg-secondary/50 p-2 rounded-xl border border-border">
+                 <span className="text-[9px] font-black uppercase text-muted-foreground ml-1">De:</span>
+                 <input type="date" value={exportStartDate} onChange={e => setExportStartDate(e.target.value)} 
+                   className="bg-transparent text-[10px] font-bold outline-none w-28" title="Data Inicial para Exportação" />
+                 <span className="text-[9px] font-black uppercase text-muted-foreground">Até:</span>
+                 <input type="date" value={exportEndDate} onChange={e => setExportEndDate(e.target.value)} 
+                   className="bg-transparent text-[10px] font-bold outline-none w-28" title="Data Final para Exportação" />
+               </div>
+               <button 
+                 onClick={generateExcel}
+                 disabled={!selectedTurma || isExporting}
+                 className="flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-xl text-xs font-black hover:bg-green-700 transition-all disabled:opacity-50 shadow-lg shadow-green-600/20"
+               >
+                 {isExporting ? <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <FileSpreadsheet size={14} />}
+                 EXPORTAR 8H (PERÍODO)
+               </button>
+            </div>
           )}
         </div>
 
