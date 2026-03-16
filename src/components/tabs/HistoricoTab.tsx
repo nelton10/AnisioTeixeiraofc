@@ -250,7 +250,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
       )}
 
       {/* Bulk Delete Action Bar */}
-      {selectedIds.length > 0 && userRole === 'admin' && (
+      {selectedIds.length > 0 && (userRole === 'admin' || userRole === 'professor') && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-destructive/90 backdrop-blur-md text-destructive-foreground px-6 py-4 rounded-2xl shadow-2xl z-[100] flex items-center gap-4 animate-slide-up border border-white/20">
           <span className="font-black whitespace-nowrap">{selectedIds.length} selecionados</span>
           <button onClick={() => setBulkDeleteConfirm(true)} className="bg-background text-foreground px-4 py-2 rounded-xl text-xs font-black uppercase hover:bg-muted transition-all active:scale-95 flex items-center gap-2">
@@ -309,7 +309,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
           return (
             <div key={`${r._type}-${r.id}`} className={`glass rounded-2xl p-4 shadow-sm hover:shadow-md transition-all group flex gap-4 ${isSelected ? 'ring-2 ring-destructive bg-destructive/5' : ''}`}>
 
-              {userRole === 'admin' && (
+              {(userRole === 'admin' || userRole === 'professor') && (
                 <button onClick={() => toggleSelect(r.id, r._type)} className="mt-1 text-muted-foreground hover:text-foreground">
                   {isSelected ? <CheckSquare className="text-destructive" size={20} /> : <Square size={20} />}
                 </button>
@@ -355,7 +355,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
                       if (fullRec?.fotoUrl) setFotoViewer(fullRec.fotoUrl);
                       else notify("Imagem não encontrada.");
                     }} className="text-primary p-1"><Camera size={14} /></button>}
-                    {userRole === 'admin' && (
+                    {(userRole === 'admin' || userRole === 'professor') && (
                       <>
                         {r._type === 'history' && <button onClick={() => { setEditModal(r); setEditText(r.detalhe); }} className="text-primary p-1"><Edit size={14} /></button>}
                         <button onClick={() => setDeleteConfirm({ id: r.id, nome: r.alunoNome, type: r._type })} className="text-destructive p-1"><Trash2 size={14} /></button>
