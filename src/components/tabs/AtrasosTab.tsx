@@ -80,7 +80,6 @@ const AtrasosTab: React.FC<AtrasosTabProps> = ({ alunos, username, notify, refre
                 >
                   <div>
                     <p className="font-extrabold text-foreground text-sm">{a.nome}</p>
-                    <span className="text-[10px] font-black uppercase text-warning bg-warning/10 px-2 py-0.5 rounded shadow-sm">{a.turma}</span>
                   </div>
                   {isSelected && <Check size={18} className="text-warning shrink-0" />}
                 </button>
@@ -95,7 +94,7 @@ const AtrasosTab: React.FC<AtrasosTabProps> = ({ alunos, username, notify, refre
         <div className="flex flex-wrap gap-2 animate-scale-in">
           {selectedAlunosDetails.map(aluno => (
             <div key={aluno.id} className="flex items-center gap-2 bg-warning/20 border border-warning/30 text-warning-foreground px-3 py-2 rounded-xl text-sm font-bold shadow-sm">
-              <span>{aluno.nome.split(' ')[0]}</span>
+              <span>{aluno.nome}</span>
               <button onClick={() => toggleAluno(aluno.id)} className="p-1 hover:bg-warning/30 rounded-full transition-all text-warning-foreground">
                 <X size={14} />
               </button>

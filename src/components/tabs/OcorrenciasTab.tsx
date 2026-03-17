@@ -127,7 +127,7 @@ const OcorrenciasTab: React.FC<OcorrenciasTabProps> = ({ alunos, turmasExistente
           <button key={a.id} onClick={() => setSelectedAlunosIds(p => p.includes(a.id) ? p.filter(x => x !== a.id) : [...p, a.id])}
             className={`p-3.5 rounded-2xl text-xs font-bold border text-left transition-all active:scale-95 flex justify-between items-center
             ${selectedAlunosIds.includes(a.id) ? 'bg-primary border-primary text-primary-foreground shadow-md' : 'bg-secondary hover:bg-muted text-foreground border-border'}`}>
-            <span className="truncate pr-2">{a.turma} | {a.nome}</span>
+            <span className="truncate pr-2">{a.nome}</span>
             {selectedAlunosIds.includes(a.id) && <CheckCircle2 size={16} className="shrink-0 opacity-70" />}
           </button>
         ))}

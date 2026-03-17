@@ -227,7 +227,7 @@ const SaidasTab: React.FC<SaidasTabProps> = ({
             <option value="">Selecionar Aluno...</option>
             {alunos.filter(a => a.turma === selectedTurma).map(a => {
               const isSuspended = suspendedInTurma.some(s => s.alunoId === a.id);
-              return <option key={a.id} value={a.id} disabled={isSuspended}>{a.turma} | {a.nome}{isSuspended ? ' (SUSPENSO)' : ''}</option>;
+              return <option key={a.id} value={a.id} disabled={isSuspended}>{a.nome}{isSuspended ? ' (SUSPENSO)' : ''}</option>;
             })}
           </select>
           {selectedAlunoId && (
