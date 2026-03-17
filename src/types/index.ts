@@ -5,6 +5,7 @@ export interface Aluno {
   responsavel_nome?: string;
   responsavel_telefone?: string;
   responsavel_email?: string;
+  proibido_saida?: boolean;
 }
 
 export interface ActiveExit {

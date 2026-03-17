@@ -108,10 +108,15 @@ const SaidasTab: React.FC<SaidasTabProps> = ({
     try {
       const a = alunos.find(x => x.id === selectedAlunoId);
       if (!a) return notify("Selecione um aluno.");
+
+      if (a.proibido_saida && !isEmergencyMode) {
+        return notify(`⚠️ Aluno ${a.nome} está PROIBIDO de sair!`);
+      }
+
       await store.addActiveExit({
         id: store.generateId(), alunoId: a.id, alunoNome: a.nome, turma: a.turma,
         destino: destinoSaida, startTime: Date.now(), professor: username,
-        autorRole: userRole, isEmergency: !!activeBlock && isEmergencyMode
+        autorRole: userRole, isEmergency: (!!activeBlock || a.proibido_saida) && isEmergencyMode
       });
       setSelectedAlunoId('');
       setIsEmergencyMode(false);
@@ -126,6 +131,11 @@ const SaidasTab: React.FC<SaidasTabProps> = ({
   const handleAddToQueue = () => {
     const a = alunos.find(x => x.id === selectedAlunoId);
     if (!a) return notify("Selecione um aluno.");
+
+    if (a.proibido_saida) {
+      return notify(`⚠️ Aluno ${a.nome} está PROIBIDO de sair e não pode entrar na fila.`);
+    }
+
     addToSaidasQueue({
       id: store.generateId(),
       alunoId: a.id,
@@ -191,18 +201,32 @@ const SaidasTab: React.FC<SaidasTabProps> = ({
       <div className={`glass rounded-3xl p-6 shadow-lg space-y-5 transition-colors ${activeBlock ? 'border-destructive/30 bg-destructive/5' : ''}`}>
         <h3 className="text-sm font-black flex items-center gap-2 text-primary tracking-tight"><UserCheck size={18} strokeWidth={2.5} /> Autorizar Saída</h3>
 
-        {activeBlock && (
-          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl space-y-2">
-            <div className="flex items-center gap-2 text-destructive font-extrabold tracking-tight text-sm">
-              <Lock size={18} strokeWidth={2.5} /> Bloqueio Ativo: {activeBlock.label}
-            </div>
-            <p className="text-xs text-destructive/80 font-medium">Saídas normais bloqueadas. Apenas emergências permitidas.</p>
-            <label className="flex items-center gap-3 cursor-pointer mt-2 bg-card/60 p-3 rounded-xl border border-destructive/10 hover:bg-card/80 transition-colors">
-              <input type="checkbox" checked={isEmergencyMode} onChange={e => setIsEmergencyMode(e.target.checked)} className="w-5 h-5 accent-destructive rounded" />
-              <span className="text-sm font-bold text-destructive">Forçar Saída de Emergência</span>
-            </label>
-          </div>
-        )}
+        {(() => {
+          const selectedAluno = alunos.find(a => a.id === selectedAlunoId);
+          const isBlockedByConfig = !!activeBlock;
+          const isProhibited = selectedAluno?.proibido_saida;
+
+          if (isBlockedByConfig || isProhibited) {
+            return (
+              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl space-y-2 animate-scale-in">
+                <div className="flex items-center gap-2 text-destructive font-extrabold tracking-tight text-sm">
+                  <Lock size={18} strokeWidth={2.5} /> 
+                  {isBlockedByConfig ? `Bloqueio Ativo: ${activeBlock.label}` : 'Saída Proibida para este Aluno'}
+                </div>
+                <p className="text-xs text-destructive/80 font-medium">
+                  {isBlockedByConfig 
+                    ? 'Saídas normais bloqueadas. Apenas emergências permitidas.' 
+                    : 'Este aluno está proibido de saídas normais pela gestão.'}
+                </p>
+                <label className="flex items-center gap-3 cursor-pointer mt-2 bg-card/60 p-3 rounded-xl border border-destructive/10 hover:bg-card/80 transition-colors">
+                  <input type="checkbox" checked={isEmergencyMode} onChange={e => setIsEmergencyMode(e.target.checked)} className="w-5 h-5 accent-destructive rounded" />
+                  <span className="text-sm font-bold text-destructive">Forçar Saída de Emergência</span>
+                </label>
+              </div>
+            );
+          }
+          return null;
+        })()}
 
         <select className="w-full p-4 bg-secondary rounded-2xl border border-border outline-none focus:bg-card focus:ring-2 focus:ring-primary/20 transition-all font-semibold text-foreground appearance-none"
           onChange={e => { setSelectedTurma(e.target.value); setSelectedAlunoId(''); }} value={selectedTurma}>
@@ -227,7 +251,13 @@ const SaidasTab: React.FC<SaidasTabProps> = ({
             <option value="">Selecionar Aluno...</option>
             {alunos.filter(a => a.turma === selectedTurma).map(a => {
               const isSuspended = suspendedInTurma.some(s => s.alunoId === a.id);
-              return <option key={a.id} value={a.id} disabled={isSuspended}>{a.nome}{isSuspended ? ' (SUSPENSO)' : ''}</option>;
+              const isBlocked = a.proibido_saida;
+              return (
+                <option key={a.id} value={a.id} disabled={isSuspended}>
+                  {a.nome}
+                  {isSuspended ? ' (SUSPENSO)' : isBlocked ? ' (PROIBIDO)' : ''}
+                </option>
+              );
             })}
           </select>
           {selectedAlunoId && (

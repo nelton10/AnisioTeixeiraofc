@@ -166,7 +166,8 @@ export async function addAluno(aluno: Omit<Aluno, 'id'> & { id?: string }) {
     turma: aluno.turma,
     responsavel_nome: aluno.responsavel_nome,
     responsavel_telefone: aluno.responsavel_telefone,
-    responsavel_email: aluno.responsavel_email
+    responsavel_email: aluno.responsavel_email,
+    proibido_saida: aluno.proibido_saida || false
   };
   await executeMutation(
     { table: 'alumnos', action: 'insert', payload: [dbAluno] },
@@ -179,6 +180,7 @@ export async function updateAluno(id: string, data: Partial<Aluno>) {
   if (data.responsavel_nome !== undefined) dbData.responsavel_nome = data.responsavel_nome;
   if (data.responsavel_telefone !== undefined) dbData.responsavel_telefone = data.responsavel_telefone;
   if (data.responsavel_email !== undefined) dbData.responsavel_email = data.responsavel_email;
+  if (data.proibido_saida !== undefined) dbData.proibido_saida = data.proibido_saida;
 
   await executeMutation(
     { table: 'alumnos', action: 'update', payload: dbData, matchField: 'id', matchValue: id },

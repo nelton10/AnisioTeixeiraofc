@@ -12,7 +12,8 @@ import {
     ArrowRightLeft,
     FileSpreadsheet,
     User,
-    AlertTriangle
+    AlertTriangle,
+    Lock
 } from 'lucide-react';
 import * as store from '@/lib/store';
 import { HistoryRecord, LibraryItem, Aluno, UserRole } from '@/types';
@@ -37,7 +38,7 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records
     const [suspendAlunoModal, setSuspendAlunoModal] = useState<Aluno | null>(null);
     const [suspendReturnDate, setSuspendReturnDate] = useState('');
 
-    const [formData, setFormData] = useState({ nome: '', turma: '' });
+    const [formData, setFormData] = useState({ nome: '', turma: '', proibido_saida: false });
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const filteredAlunos = alunos.filter(a => {
@@ -50,8 +51,8 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records
         e.preventDefault();
         if (!formData.nome || !formData.turma) return notify("Preencha todos os campos.");
         try {
-            await store.addAluno({ nome: formData.nome, turma: formData.turma });
-            setFormData({ nome: '', turma: '' });
+            await store.addAluno({ nome: formData.nome, turma: formData.turma, proibido_saida: formData.proibido_saida });
+            setFormData({ nome: '', turma: '', proibido_saida: false });
             setIsAddModalOpen(false);
             await refreshData();
             notify("Aluno adicionado com sucesso!");
@@ -64,7 +65,11 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records
         e.preventDefault();
         if (!editingAluno) return;
         try {
-            await store.updateAluno(editingAluno.id, { nome: editingAluno.nome, turma: editingAluno.turma });
+            await store.updateAluno(editingAluno.id, { 
+                nome: editingAluno.nome, 
+                turma: editingAluno.turma,
+                proibido_saida: editingAluno.proibido_saida
+            });
             setEditingAluno(null);
             await refreshData();
             notify("Dados atualizados!");
@@ -269,6 +274,11 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records
                                 <p className="font-extrabold text-foreground text-sm leading-tight">{a.nome}</p>
                                 <div className="flex items-center gap-2 mt-1">
                                     <span className="text-[10px] font-black uppercase text-primary bg-primary/10 px-2 py-0.5 rounded shadow-sm">{a.turma}</span>
+                                    {a.proibido_saida && (
+                                        <span className="text-[10px] font-black uppercase text-destructive bg-destructive/10 px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
+                                            <Lock size={10} /> BLOQUEADO
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -344,6 +354,20 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records
                                     className="w-full p-4 bg-secondary rounded-2xl border border-border outline-none focus:bg-card focus:ring-2 focus:ring-primary/20 transition-all font-bold"
                                 />
                             </div>
+                            <label className="flex items-center gap-3 cursor-pointer p-4 bg-secondary/50 rounded-2xl border border-border hover:bg-secondary transition-all">
+                                <input 
+                                    type="checkbox" 
+                                    checked={formData.proibido_saida} 
+                                    onChange={e => setFormData({ ...formData, proibido_saida: e.target.checked })}
+                                    className="w-5 h-5 accent-destructive rounded"
+                                />
+                                <div className="flex items-center gap-2">
+                                    <Lock size={16} className={formData.proibido_saida ? "text-destructive" : "text-muted-foreground"} />
+                                    <span className={`text-sm font-bold ${formData.proibido_saida ? "text-destructive" : "text-foreground"}`}>
+                                        Proibir Saídas (exceto emergência)
+                                    </span>
+                                </div>
+                            </label>
                         </div>
                         <button type="submit" className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-black shadow-lg active:scale-95 transition-all">
                             GUARDAR ALUNO
@@ -382,6 +406,20 @@ const AlunosTab: React.FC<AlunosTabProps> = ({ alunos, turmasExistentes, records
                                     className="w-full p-4 bg-secondary rounded-2xl border border-border outline-none focus:bg-card focus:ring-2 focus:ring-primary/20 transition-all font-bold"
                                 />
                             </div>
+                            <label className="flex items-center gap-3 cursor-pointer p-4 bg-secondary/50 rounded-2xl border border-border hover:bg-secondary transition-all">
+                                <input 
+                                    type="checkbox" 
+                                    checked={editingAluno.proibido_saida || false} 
+                                    onChange={e => setEditingAluno({ ...editingAluno, proibido_saida: e.target.checked })}
+                                    className="w-5 h-5 accent-destructive rounded"
+                                />
+                                <div className="flex items-center gap-2">
+                                    <Lock size={16} className={editingAluno.proibido_saida ? "text-destructive" : "text-muted-foreground"} />
+                                    <span className={`text-sm font-bold ${editingAluno.proibido_saida ? "text-destructive" : "text-foreground"}`}>
+                                        Proibir Saídas (exceto emergência)
+                                    </span>
+                                </div>
+                            </label>
                         </div>
                         <button type="submit" className="w-full py-4 bg-foreground text-background rounded-2xl font-black shadow-lg active:scale-95 transition-all">
                             ATUALIZAR DADOS
