@@ -58,12 +58,14 @@ export function useAppState() {
     passwords: { admin: 'gestao', professor: 'prof', apoio: 'apoio', parent: 'pais' }
   });
   const [activeTab, setActiveTab] = useState('saidas');
+  const [historyFilter, setHistoryFilter] = useState<{start?: number, end?: number}>({});
   const [showToast, setShowToast] = useState<string | null>(null);
   const [currentTimeStr, setCurrentTimeStr] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshHistory = useCallback(async (start?: number, end?: number) => {
     try {
+      setHistoryFilter({ start, end });
       const hist = await store.getHistory(start, end);
       setRecords(hist);
     } catch (e) { console.error(e); }
@@ -83,7 +85,7 @@ export function useAppState() {
 
       const [exits, hist, coord, lib, susp, avs] = await Promise.all([
         store.getActiveExits(),
-        store.getHistory(), // Will default to 12h
+        store.getHistory(historyFilter.start, historyFilter.end),
         store.getCoordinationQueue(),
         store.getLibraryQueue(),
         store.getSuspensions(),

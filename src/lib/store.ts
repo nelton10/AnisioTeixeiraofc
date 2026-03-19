@@ -235,7 +235,8 @@ export async function removeActiveExit(id: string) {
 export async function getHistory(startDate?: number, endDate?: number): Promise<HistoryRecord[]> {
   let query = supabase.from('history')
     .select('id, aluno_id, aluno_nome, turma, categoria, detalhe, timestamp, raw_timestamp, professor, autor_role')
-    .order('raw_timestamp', { ascending: false });
+    .order('raw_timestamp', { ascending: false })
+    .limit(5000);
 
   if (startDate !== undefined) {
     if (startDate > 0) {
