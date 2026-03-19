@@ -114,7 +114,7 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({
     // Sort line data by date string parsing (rough sorting)
     const trendData = Object.entries(lineDataMap)
       .map(([date, counts]) => ({ date, ...counts }))
-      .slice(-7); // Last 7 days with data
+      .slice(verTodoPeriodo ? -30 : -7); // Show last 30 days if "Todo o Período" is on, else 7
 
     // Heatmap Data (Day x Period)
     const heatmapMatrix = [
@@ -258,10 +258,13 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({
     link.click();
   };
 
-  const ocorrenciasTotais = records.filter(r => r.categoria === 'ocorrencia').length;
-  const ocorrenciasPeriodo = filteredHistory.filter(r => r.categoria === 'ocorrencia').length;
-  const diasComOcorrencia = new Set(records.filter(r => r.categoria === 'ocorrencia').map(r => new Date(r.rawTimestamp || 0).setHours(0, 0, 0, 0))).size;
-  const mediaPorDia = diasComOcorrencia > 0 ? parseFloat((ocorrenciasTotais / diasComOcorrencia).toFixed(1)) : 0;
+  const ocorrenciasTotais = records.filter(r => r.categoria === 'ocorrencia' || r.categoria === 'atraso').length;
+  const ocorrenciasNoPeriodo = filteredHistory.filter(r => r.categoria === 'ocorrencia').length;
+  const atrasosNoPeriodo = filteredHistory.filter(r => r.categoria === 'atraso').length;
+  const metricsCount = verTodoPeriodo ? ocorrenciasTotais : filteredHistory.filter(r => r.categoria === 'ocorrencia' || r.categoria === 'atraso').length;
+
+  const diasComData = new Set(filteredHistory.map(r => new Date(r.rawTimestamp || 0).setHours(0, 0, 0, 0))).size;
+  const mediaPorDia = diasComData > 0 ? parseFloat((metricsCount / diasComData).toFixed(1)) : 0;
 
   // Pie Chart Data
   const pieData = [
@@ -318,8 +321,8 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-destructive/5 p-4 rounded-2xl border border-destructive/10 text-center relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-destructive" />
-              <p className="text-[10px] font-extrabold text-destructive/70 uppercase tracking-widest mb-1.5">Total</p>
-              <p className="text-3xl font-black text-destructive">{ocorrenciasTotais}</p>
+              <p className="text-[10px] font-extrabold text-destructive/70 uppercase tracking-widest mb-1.5">No Período</p>
+              <p className="text-3xl font-black text-destructive">{metricsCount}</p>
             </div>
             <div className="bg-warning/5 p-4 rounded-2xl border border-warning/10 text-center relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-warning" />
@@ -328,8 +331,8 @@ const AnaliseTab: React.FC<AnaliseTabProps> = ({
             </div>
             <div className="bg-primary p-4 rounded-2xl text-center relative overflow-hidden shadow-md">
               <div className="absolute top-0 left-0 w-full h-1 bg-primary-foreground/20" />
-              <p className="text-[10px] font-extrabold text-primary-foreground/70 uppercase tracking-widest mb-1.5">No Filtro</p>
-              <p className="text-3xl font-black text-primary-foreground">{ocorrenciasPeriodo}</p>
+              <p className="text-[10px] font-extrabold text-primary-foreground/70 uppercase tracking-widest mb-1.5">Total BD</p>
+              <p className="text-3xl font-black text-primary-foreground">{ocorrenciasTotais}</p>
             </div>
           </div>
 

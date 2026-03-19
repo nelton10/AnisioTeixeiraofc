@@ -279,7 +279,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
       <div className="space-y-3">
         {filtered.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground font-bold bg-secondary/50 rounded-3xl border-2 border-dashed border-border text-sm">Sem registos.</div>
-        ) : filtered.slice(0, 500).map(r => {
+        ) : filtered.map(r => {
           const isSelected = selectedIds.find(s => s.id === r.id);
           return (
             <div key={`${r._type}-${r.id}`} className={`glass rounded-2xl p-4 shadow-sm hover:shadow-md transition-all group flex gap-4 ${isSelected ? 'ring-2 ring-destructive bg-destructive/5' : ''}`}>
