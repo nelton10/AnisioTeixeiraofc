@@ -81,8 +81,21 @@ const Index = () => {
                 notify={state.notify} refreshData={state.refreshData} />
             )}
             {state.activeTab === 'historico' && (
-              <HistoricoTab records={state.records} libraryQueue={state.libraryQueue} turmasExistentes={state.turmasExistentes}
-                userRole={state.authState.role} notify={state.notify} refreshData={state.refreshData} refreshHistory={state.refreshHistory} />
+              <HistoricoTab 
+                records={state.records} 
+                libraryQueue={state.libraryQueue} 
+                turmasExistentes={state.turmasExistentes}
+                userRole={state.authState.role} 
+                notify={state.notify} 
+                refreshData={state.refreshData} 
+                refreshHistory={state.refreshHistory}
+                verTodoPeriodo={state.verTodoPeriodo}
+                setVerTodoPeriodo={state.setVerTodoPeriodo}
+                filtroDataInicio={state.filtroDataInicio}
+                setFiltroDataInicio={state.setFiltroDataInicio}
+                filtroDataFim={state.filtroDataFim}
+                setFiltroDataFim={state.setFiltroDataFim}
+              />
             )}
             {state.activeTab === 'atrasos' && (
               <AtrasosTab alunos={state.alunos} turmasExistentes={state.turmasExistentes}
@@ -99,7 +112,18 @@ const Index = () => {
                 notify={state.notify} refreshData={state.refreshData} />
             )}
             {state.activeTab === 'pesquisa' && (
-              <PesquisaTab alunos={state.alunos} records={state.records} turmasExistentes={state.turmasExistentes} refreshHistory={state.refreshHistory} />
+              <PesquisaTab 
+                alunos={state.alunos} 
+                records={state.records} 
+                turmasExistentes={state.turmasExistentes} 
+                refreshHistory={state.refreshHistory}
+                verTodoPeriodo={state.verTodoPeriodo}
+                setVerTodoPeriodo={state.setVerTodoPeriodo}
+                filtroDataInicio={state.filtroDataInicio}
+                setFiltroDataInicio={state.setFiltroDataInicio}
+                filtroDataFim={state.filtroDataFim}
+                setFiltroDataFim={state.setFiltroDataFim}
+              />
             )}
             {state.activeTab === 'frequencia' && (
               <FrequenciaTab 
@@ -119,7 +143,17 @@ const Index = () => {
                 notify={state.notify} refreshData={state.refreshData} />
             )}
             {state.activeTab === 'acompanhamento' && (
-              <AnaliseTab records={state.records} turmasExistentes={state.turmasExistentes} statsSummary={state.statsSummary} />
+              <AnaliseTab 
+                records={state.records} 
+                turmasExistentes={state.turmasExistentes} 
+                statsSummary={state.statsSummary}
+                verTodoPeriodo={state.verTodoPeriodo}
+                setVerTodoPeriodo={state.setVerTodoPeriodo}
+                filtroDataInicio={state.filtroDataInicio}
+                setFiltroDataInicio={state.setFiltroDataInicio}
+                filtroDataFim={state.filtroDataFim}
+                setFiltroDataFim={state.setFiltroDataFim}
+              />
             )}
             {state.activeTab === 'alunos' && (
               <AlunosTab alunos={state.alunos} turmasExistentes={state.turmasExistentes}

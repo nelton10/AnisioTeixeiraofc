@@ -11,6 +11,12 @@ interface HistoricoTabProps {
   notify: (msg: string) => void;
   refreshData: () => Promise<void>;
   refreshHistory: (start?: number, end?: number) => Promise<void>;
+  verTodoPeriodo: boolean;
+  setVerTodoPeriodo: (v: boolean) => void;
+  filtroDataInicio: string;
+  setFiltroDataInicio: (s: string) => void;
+  filtroDataFim: string;
+  setFiltroDataFim: (s: string) => void;
 }
 
 const categoriaColors: Record<string, string> = {
@@ -23,13 +29,13 @@ const categoriaColors: Record<string, string> = {
   avaliacao_aula: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20 bg-indigo-500/5',
 };
 
-const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turmasExistentes, userRole, notify, refreshData, refreshHistory }) => {
+const HistoricoTab: React.FC<HistoricoTabProps> = ({ 
+  records, libraryQueue, turmasExistentes, userRole, notify, refreshData, refreshHistory,
+  verTodoPeriodo, setVerTodoPeriodo, filtroDataInicio, setFiltroDataInicio, filtroDataFim, setFiltroDataFim
+}) => {
   const [filtroCategoria, setFiltroCategoria] = useState('ocorrencia');
   const [filtroTurma, setFiltroTurma] = useState('');
   const [filtroBuscaNome, setFiltroBuscaNome] = useState('');
-  const [dataInicio, setDataInicio] = useState('');
-  const [dataFim, setDataFim] = useState('');
-  const [verTodoPeriodo, setVerTodoPeriodo] = useState(false);
 
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, nome: string, type: 'history' | 'library' } | null>(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
@@ -101,13 +107,13 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
 
       const recordTime = r.rawTimestamp || 0;
       if (!verTodoPeriodo) {
-        if (dataInicio) {
-          const start = new Date(dataInicio);
+        if (filtroDataInicio) {
+          const start = new Date(filtroDataInicio);
           start.setHours(0, 0, 0, 0);
           if (recordTime < start.getTime()) return false;
         }
-        if (dataFim) {
-          const end = new Date(dataFim);
+        if (filtroDataFim) {
+          const end = new Date(filtroDataFim);
           end.setHours(23, 59, 59, 999);
           if (recordTime > end.getTime()) return false;
         }
@@ -115,7 +121,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
 
       return true;
     });
-  }, [allMergedRecords, filtroCategoria, filtroTurma, filtroBuscaNome, dataInicio, dataFim]);
+  }, [allMergedRecords, filtroCategoria, filtroTurma, filtroBuscaNome, filtroDataInicio, filtroDataFim, verTodoPeriodo]);
 
   const toggleSelect = (id: string, type: 'history' | 'library') => {
     setSelectedIds(prev => {
@@ -151,34 +157,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
     }
   };
 
-  const handleSearchDatabase = async () => {
-    let startTs: number | undefined;
-    let endTs: number | undefined;
-
-    if (verTodoPeriodo) {
-      startTs = 0; // Fetch all
-    } else {
-      if (dataInicio) {
-        const d = new Date(dataInicio);
-        d.setHours(0, 0, 0, 0);
-        startTs = d.getTime();
-      }
-      if (dataFim) {
-        const d = new Date(dataFim);
-        d.setHours(23, 59, 59, 999);
-        endTs = d.getTime();
-      }
-    }
-
-    if (startTs === undefined && !dataFim) {
-      notify("Selecione pelo menos uma data para busca profunda.");
-      return;
-    }
-
-    notify("Buscando registros no banco...");
-    await refreshHistory(startTs, endTs);
-    notify("Busca concluída!");
-  };
+  // Reactive search logic handled in useAppState.ts
 
   return (
     <div className="space-y-5 animate-slide-up">
@@ -284,18 +263,14 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({ records, libraryQueue, turm
               </button>
             </div>
             <div className="flex items-center gap-2">
-              <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)}
-                className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/20 text-foreground" />
+              <input type="date" disabled={verTodoPeriodo} value={filtroDataInicio} onChange={e => setFiltroDataInicio(e.target.value)}
+                className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/20 text-foreground disabled:opacity-50" />
               <span className="text-muted-foreground">/</span>
-              <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)}
-                className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/20 text-foreground" />
-              <button 
-                onClick={handleSearchDatabase}
-                className="bg-primary text-primary-foreground p-2 rounded-xl hover:opacity-90 active:scale-95 transition-all shadow-md"
-                title="Buscar registros mais antigos no banco"
-              >
+              <input type="date" disabled={verTodoPeriodo} value={filtroDataFim} onChange={e => setFiltroDataFim(e.target.value)}
+                className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/20 text-foreground disabled:opacity-50" />
+              <div className="bg-primary/10 text-primary p-2 rounded-xl" title="Busca automática ativa">
                 <History size={16} />
-              </button>
+              </div>
             </div>
           </div>
         </div>

@@ -58,6 +58,9 @@ export function useAppState() {
     passwords: { admin: 'gestao', professor: 'prof', apoio: 'apoio', parent: 'pais' }
   });
   const [activeTab, setActiveTab] = useState('saidas');
+  const [verTodoPeriodo, setVerTodoPeriodo] = useState(false);
+  const [filtroDataInicio, setFiltroDataInicio] = useState('');
+  const [filtroDataFim, setFiltroDataFim] = useState('');
   const [historyFilter, setHistoryFilter] = useState<{start?: number, end?: number}>({});
   const [showToast, setShowToast] = useState<string | null>(null);
   const [currentTimeStr, setCurrentTimeStr] = useState('');
@@ -112,6 +115,27 @@ export function useAppState() {
     }
     refreshData();
   }, [refreshData]);
+
+  // Reactive History Sync
+  useEffect(() => {
+    let startTs: number | undefined;
+    let endTs: number | undefined;
+
+    if (verTodoPeriodo) {
+      startTs = 0;
+    } else if (filtroDataInicio || filtroDataFim) {
+      if (filtroDataInicio) {
+        const d = new Date(filtroDataInicio); d.setHours(0, 0, 0, 0);
+        startTs = d.getTime();
+      }
+      if (filtroDataFim) {
+        const d = new Date(filtroDataFim); d.setHours(23, 59, 59, 999);
+        endTs = d.getTime();
+      }
+    }
+
+    refreshHistory(startTs, endTs);
+  }, [verTodoPeriodo, filtroDataInicio, filtroDataFim, refreshHistory]);
 
   // Real-time subscriptions
   useEffect(() => {
@@ -270,6 +294,7 @@ export function useAppState() {
     authState, alunos, activeExits, saidasQueue, records, coordinationQueue, libraryQueue,
     suspensions, avisos, config, activeTab, showToast, currentTimeStr, isLoading,
     turmasExistentes, activeBlock, statsSummary,
+    verTodoPeriodo, setVerTodoPeriodo, filtroDataInicio, setFiltroDataInicio, filtroDataFim, setFiltroDataFim,
     setActiveTab, notify, login, logout, refreshData, refreshHistory, getTodayExitsCount, saveConfig,
     addToSaidasQueue, removeFromSaidasQueue,
   };

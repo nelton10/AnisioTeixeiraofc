@@ -7,27 +7,27 @@ interface PesquisaTabProps {
   records: HistoryRecord[];
   turmasExistentes: string[];
   refreshHistory: (start?: number, end?: number) => Promise<void>;
+  verTodoPeriodo: boolean;
+  setVerTodoPeriodo: (v: boolean) => void;
+  filtroDataInicio: string;
+  setFiltroDataInicio: (s: string) => void;
+  filtroDataFim: string;
+  setFiltroDataFim: (s: string) => void;
 }
 
-const PesquisaTab: React.FC<PesquisaTabProps> = ({ alunos, records, turmasExistentes, refreshHistory }) => {
+const PesquisaTab: React.FC<PesquisaTabProps> = ({ 
+  alunos, records, turmasExistentes, refreshHistory,
+  verTodoPeriodo, setVerTodoPeriodo, filtroDataInicio, setFiltroDataInicio, filtroDataFim, setFiltroDataFim
+}) => {
   const [filtroBuscaNome, setFiltroBuscaNome] = useState('');
   const [selectedTurma, setSelectedTurma] = useState('');
   const [filtroAlunoId, setFiltroAlunoId] = useState('');
-  const [dataInicio, setDataInicio] = useState('');
-  const [dataFim, setDataFim] = useState('');
-  const [verTodoPeriodo, setVerTodoPeriodo] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const handleSync = async (forceFull = false) => {
+  const handleSync = async () => {
     setIsSyncing(true);
     try {
-      if (forceFull || verTodoPeriodo) {
-        await refreshHistory(0); // Fetch all
-      } else {
-        const start = dataInicio ? new Date(dataInicio).setHours(0, 0, 0, 0) : undefined;
-        const end = dataFim ? new Date(dataFim).setHours(23, 59, 59, 999) : undefined;
-        await refreshHistory(start, end);
-      }
+      await refreshHistory(verTodoPeriodo ? 0 : undefined); 
     } finally {
       setIsSyncing(false);
     }
@@ -39,8 +39,8 @@ const PesquisaTab: React.FC<PesquisaTabProps> = ({ alunos, records, turmasExiste
       meritos: number; atrasos: number; suspensoes: number; tempoForaTotal: number
     }> = {};
 
-    const start = dataInicio ? new Date(dataInicio).setHours(0, 0, 0, 0) : null;
-    const end = dataFim ? new Date(dataFim).setHours(23, 59, 59, 999) : null;
+    const start = filtroDataInicio ? new Date(filtroDataInicio).setHours(0, 0, 0, 0) : null;
+    const end = filtroDataFim ? new Date(filtroDataFim).setHours(23, 59, 59, 999) : null;
 
     records.forEach(r => {
       if (!r.alunoId || r.alunoId === 'TURMA') return;
@@ -72,7 +72,7 @@ const PesquisaTab: React.FC<PesquisaTabProps> = ({ alunos, records, turmasExiste
     });
 
     return Object.values(map).sort((a, b) => b.ocorrencias - a.ocorrencias || a.nome.localeCompare(b.nome));
-  }, [records, dataInicio, dataFim, verTodoPeriodo]);
+  }, [records, filtroDataInicio, filtroDataFim, verTodoPeriodo]);
 
   const filtered = studentSummary.filter(s =>
     (!selectedTurma || s.turma === selectedTurma) &&
@@ -207,11 +207,11 @@ const PesquisaTab: React.FC<PesquisaTabProps> = ({ alunos, records, turmasExiste
               </button>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <input type="date" value={dataInicio} onChange={e => {setDataInicio(e.target.value); setVerTodoPeriodo(false);}} 
-                className="bg-card border border-border rounded-2xl p-3 text-xs font-bold outline-none text-foreground" />
+              <input type="date" disabled={verTodoPeriodo} value={filtroDataInicio} onChange={e => {setFiltroDataInicio(e.target.value); setVerTodoPeriodo(false);}} 
+                className="bg-card border border-border rounded-2xl p-3 text-xs font-bold outline-none text-foreground disabled:opacity-50" />
               <div className="flex gap-2">
-                <input type="date" value={dataFim} onChange={e => {setDataFim(e.target.value); setVerTodoPeriodo(false);}} 
-                  className="w-full bg-card border border-border rounded-2xl p-3 text-xs font-bold outline-none text-foreground" />
+                <input type="date" disabled={verTodoPeriodo} value={filtroDataFim} onChange={e => {setFiltroDataFim(e.target.value); setVerTodoPeriodo(false);}} 
+                  className="w-full bg-card border border-border rounded-2xl p-3 text-xs font-bold outline-none text-foreground disabled:opacity-50" />
                 <button 
                   onClick={() => handleSync()}
                   disabled={isSyncing}

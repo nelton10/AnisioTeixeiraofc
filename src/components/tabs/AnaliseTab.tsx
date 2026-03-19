@@ -11,6 +11,12 @@ interface AnaliseTabProps {
   records: HistoryRecord[];
   turmasExistentes: string[];
   statsSummary: { totalSaidas: number; totalOcors: number; totalAtrasos: number; totalMeritos: number; totalAvaliacoes: number };
+  verTodoPeriodo: boolean;
+  setVerTodoPeriodo: (v: boolean) => void;
+  filtroDataInicio: string;
+  setFiltroDataInicio: (s: string) => void;
+  filtroDataFim: string;
+  setFiltroDataFim: (s: string) => void;
 }
 
 // Custom tooltip for styled Recharts tooltips
@@ -30,10 +36,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-const AnaliseTab: React.FC<AnaliseTabProps> = ({ records, turmasExistentes, statsSummary }) => {
-  const [filtroDataInicio, setFiltroDataInicio] = useState('');
-  const [filtroDataFim, setFiltroDataFim] = useState('');
-  const [verTodoPeriodo, setVerTodoPeriodo] = useState(false);
+const AnaliseTab: React.FC<AnaliseTabProps> = ({ 
+  records, turmasExistentes, statsSummary,
+  verTodoPeriodo, setVerTodoPeriodo, filtroDataInicio, setFiltroDataInicio, filtroDataFim, setFiltroDataFim
+}) => {
   const [selectedTurma, setSelectedTurma] = useState('');
   const [filtroBuscaNome, setFiltroBuscaNome] = useState('');
   const [tipoExport, setTipoExport] = useState('todos');
