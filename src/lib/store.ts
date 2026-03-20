@@ -235,19 +235,14 @@ export async function removeActiveExit(id: string) {
 export async function getHistory(startDate?: number, endDate?: number): Promise<HistoryRecord[]> {
   let query = supabase.from('history')
     .select('id, aluno_id, aluno_nome, turma, categoria, detalhe, timestamp, raw_timestamp, professor, autor_role')
-    .order('raw_timestamp', { ascending: false })
-    .limit(10000);
+    .order('raw_timestamp', { ascending: false });
 
-  if (startDate !== undefined) {
-    if (startDate > 0) {
-      query = query.gte('raw_timestamp', startDate);
-    }
-    // If startDate is 0, we don't apply the gte filter, fetching all history
-  } else {
-    // Default to last 12 hours
-    const twelveHoursAgo = Date.now() - (12 * 60 * 60 * 1000);
-    query = query.gte('raw_timestamp', twelveHoursAgo);
+  // Fetch all history — UI filtering handles period display
+  // No limit or date filter by default; pass startDate/endDate only when user selects a range
+  if (startDate !== undefined && startDate > 0) {
+    query = query.gte('raw_timestamp', startDate);
   }
+  // If startDate === 0 or undefined, no filter applied → fetch everything
 
   if (endDate) {
     query = query.lte('raw_timestamp', endDate);

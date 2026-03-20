@@ -86,9 +86,8 @@ export function useAppState() {
         });
       }
 
-      const [exits, hist, coord, lib, susp, avs] = await Promise.all([
+      const [exits, coord, lib, susp, avs] = await Promise.all([
         store.getActiveExits(),
-        store.getHistory(historyFilter.start, historyFilter.end),
         store.getCoordinationQueue(),
         store.getLibraryQueue(),
         store.getSuspensions(),
@@ -96,7 +95,6 @@ export function useAppState() {
       ]);
 
       setActiveExits(exits);
-      setRecords(hist);
       setCoordinationQueue(coord);
       setLibraryQueue(lib);
       setSuspensions(susp);
@@ -113,8 +111,10 @@ export function useAppState() {
     if (saved) {
       setAuthState({ isAuthenticated: true, username: saved.name, role: saved.role as UserRole, linkedStudentName: saved.linkedStudentName });
     }
+    // Always start by loading ALL records — no date filter on startup
     refreshData();
-  }, [refreshData]);
+    refreshHistory(); // no args = fetch everything
+  }, [refreshData, refreshHistory]);
 
   // Reactive History Sync
   useEffect(() => {
