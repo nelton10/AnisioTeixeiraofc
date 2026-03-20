@@ -231,8 +231,58 @@ export async function removeActiveExit(id: string) {
   );
 }
 
-// History
+// History Cache (5 minutes TTL)
+const HISTORY_CACHE_KEY = 'anisio_history_cache';
+const HISTORY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes in ms
+
+interface HistoryCache {
+  records: any[];
+  fetchedAt: number;
+  startDate?: number;
+  endDate?: number;
+}
+
+function getHistoryFromCache(startDate?: number, endDate?: number): any[] | null {
+  try {
+    const raw = localStorage.getItem(HISTORY_CACHE_KEY);
+    if (!raw) return null;
+    const cache: HistoryCache = JSON.parse(raw);
+    const isExpired = Date.now() - cache.fetchedAt > HISTORY_CACHE_TTL;
+    const sameFilter = cache.startDate === startDate && cache.endDate === endDate;
+    if (!isExpired && sameFilter) return cache.records;
+  } catch (e) {}
+  return null;
+}
+
+function saveHistoryToCache(records: any[], startDate?: number, endDate?: number) {
+  try {
+    const cache: HistoryCache = { records, fetchedAt: Date.now(), startDate, endDate };
+    localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(cache));
+  } catch (e) {}
+}
+
+export function clearHistoryCache() {
+  try { localStorage.removeItem(HISTORY_CACHE_KEY); } catch (e) {}
+}
+
+// History — Default: last 24h. Pass startDate=0 for all data (paginated).
 export async function getHistory(startDate?: number, endDate?: number): Promise<HistoryRecord[]> {
+  // Check local cache first
+  const cached = getHistoryFromCache(startDate, endDate);
+  if (cached) {
+    return cached.map((r: any) => ({
+      id: r.id, alunoId: r.aluno_id, alunoNome: r.aluno_nome, turma: r.turma, categoria: r.categoria,
+      detalhe: r.detalhe, timestamp: r.timestamp, rawTimestamp: r.raw_timestamp, professor: r.professor, autorRole: r.autor_role, fotoUrl: null
+    }));
+  }
+
+  // Determine date filter
+  let effectiveStart = startDate;
+  if (effectiveStart === undefined) {
+    // Default: last 24 hours
+    effectiveStart = Date.now() - (24 * 60 * 60 * 1000);
+  }
+
   const PAGE_SIZE = 1000;
   let allData: any[] = [];
   let from = 0;
@@ -244,9 +294,10 @@ export async function getHistory(startDate?: number, endDate?: number): Promise<
       .order('raw_timestamp', { ascending: false })
       .range(from, from + PAGE_SIZE - 1);
 
-    if (startDate !== undefined && startDate > 0) {
-      query = query.gte('raw_timestamp', startDate);
+    if (effectiveStart > 0) {
+      query = query.gte('raw_timestamp', effectiveStart);
     }
+    // effectiveStart === 0 → no date filter → fetch everything
     if (endDate) {
       query = query.lte('raw_timestamp', endDate);
     }
@@ -257,18 +308,22 @@ export async function getHistory(startDate?: number, endDate?: number): Promise<
     } else {
       allData = allData.concat(data);
       if (data.length < PAGE_SIZE) {
-        keepFetching = false; // Last page
+        keepFetching = false; // Last page reached
       } else {
         from += PAGE_SIZE;
       }
     }
   }
 
+  // Save to cache
+  saveHistoryToCache(allData, startDate, endDate);
+
   return allData.map((r: any) => ({
     id: r.id, alunoId: r.aluno_id, alunoNome: r.aluno_nome, turma: r.turma, categoria: r.categoria,
     detalhe: r.detalhe, timestamp: r.timestamp, rawTimestamp: r.raw_timestamp, professor: r.professor, autorRole: r.autor_role, fotoUrl: null
   }));
 }
+
 
 export async function getHistoryRecordWithPhoto(id: string): Promise<HistoryRecord | null> {
   const data = await handleResponse(

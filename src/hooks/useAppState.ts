@@ -68,6 +68,7 @@ export function useAppState() {
 
   const refreshHistory = useCallback(async (start?: number, end?: number) => {
     try {
+      store.clearHistoryCache(); // Invalidate cache when filter changes
       setHistoryFilter({ start, end });
       const hist = await store.getHistory(start, end);
       setRecords(hist);
@@ -111,9 +112,9 @@ export function useAppState() {
     if (saved) {
       setAuthState({ isAuthenticated: true, username: saved.name, role: saved.role as UserRole, linkedStudentName: saved.linkedStudentName });
     }
-    // Always start by loading ALL records — no date filter on startup
     refreshData();
-    refreshHistory(); // no args = fetch everything
+    // Default: load last 24h on startup (no args = 24h window in store.getHistory)
+    refreshHistory();
   }, [refreshData, refreshHistory]);
 
   // Reactive History Sync
