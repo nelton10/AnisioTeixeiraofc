@@ -233,28 +233,38 @@ export async function removeActiveExit(id: string) {
 
 // History
 export async function getHistory(startDate?: number, endDate?: number): Promise<HistoryRecord[]> {
-  let query = supabase.from('history')
-    .select('id, aluno_id, aluno_nome, turma, categoria, detalhe, timestamp, raw_timestamp, professor, autor_role')
-    .order('raw_timestamp', { ascending: false });
+  const PAGE_SIZE = 1000;
+  let allData: any[] = [];
+  let from = 0;
+  let keepFetching = true;
 
-  // Fetch all history — UI filtering handles period display
-  // No limit or date filter by default; pass startDate/endDate only when user selects a range
-  if (startDate !== undefined && startDate > 0) {
-    query = query.gte('raw_timestamp', startDate);
+  while (keepFetching) {
+    let query = supabase.from('history')
+      .select('id, aluno_id, aluno_nome, turma, categoria, detalhe, timestamp, raw_timestamp, professor, autor_role')
+      .order('raw_timestamp', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (startDate !== undefined && startDate > 0) {
+      query = query.gte('raw_timestamp', startDate);
+    }
+    if (endDate) {
+      query = query.lte('raw_timestamp', endDate);
+    }
+
+    const { data, error } = await query;
+    if (error || !data || data.length === 0) {
+      keepFetching = false;
+    } else {
+      allData = allData.concat(data);
+      if (data.length < PAGE_SIZE) {
+        keepFetching = false; // Last page
+      } else {
+        from += PAGE_SIZE;
+      }
+    }
   }
-  // If startDate === 0 or undefined, no filter applied → fetch everything
 
-  if (endDate) {
-    query = query.lte('raw_timestamp', endDate);
-  }
-
-  const data = await handleResponse(
-    query,
-    'getHistory',
-    STORAGE_KEYS.CACHE_HISTORY
-  ).catch(() => []);
-
-  return (data || []).map((r: any) => ({
+  return allData.map((r: any) => ({
     id: r.id, alunoId: r.aluno_id, alunoNome: r.aluno_nome, turma: r.turma, categoria: r.categoria,
     detalhe: r.detalhe, timestamp: r.timestamp, rawTimestamp: r.raw_timestamp, professor: r.professor, autorRole: r.autor_role, fotoUrl: null
   }));
