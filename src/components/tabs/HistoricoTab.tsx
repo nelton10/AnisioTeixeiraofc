@@ -253,7 +253,7 @@ const HistoricoTab: React.FC<HistoricoTabProps> = ({
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-1.5">
-                <History size={12} /> Intervalo (Vazio = Últimas 12h)
+                <History size={12} /> Todos os dados carregados • Filtrar por Data:
               </span>
               <button 
                 onClick={() => setVerTodoPeriodo(!verTodoPeriodo)}
