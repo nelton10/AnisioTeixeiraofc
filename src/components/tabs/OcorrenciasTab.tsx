@@ -24,6 +24,7 @@ const OcorrenciasTab: React.FC<OcorrenciasTabProps> = ({ alunos, turmasExistente
   const [customTexto, setCustomTexto] = useState('');
   const [permanenciaStatus, setPermanenciaStatus] = useState('Continuará em sala');
   const [fotoOcorrencia, setFotoOcorrencia] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const fotoInputRef = useRef<HTMLInputElement>(null);
 
   const handleFotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,8 +48,11 @@ const OcorrenciasTab: React.FC<OcorrenciasTabProps> = ({ alunos, turmasExistente
   };
 
   const handleSubmit = async () => {
-    const ts = new Date().toISOString();
-    const raw = Date.now();
+    const now = new Date();
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const finalDate = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds());
+    const ts = finalDate.toISOString();
+    const raw = finalDate.getTime();
     for (const id of selectedAlunosIds) {
       const al = alunos.find(a => a.id === id);
       if (!al) continue;
@@ -116,11 +120,23 @@ const OcorrenciasTab: React.FC<OcorrenciasTabProps> = ({ alunos, turmasExistente
         </button>
       </div>
 
-      <select className="w-full p-4 bg-secondary rounded-2xl border border-border outline-none focus:bg-card focus:ring-2 focus:ring-primary/20 transition-all font-semibold text-foreground appearance-none"
-        onChange={e => { setSelectedTurma(e.target.value); setSelectedAlunosIds([]); }} value={selectedTurma}>
-        <option value="">Filtrar Turma...</option>
-        {turmasExistentes.map(t => <option key={t} value={t}>{t}</option>)}
-      </select>
+      <div className="flex flex-col gap-4">
+        <select className="w-full p-4 bg-secondary rounded-2xl border border-border outline-none focus:bg-card focus:ring-2 focus:ring-primary/20 transition-all font-semibold text-foreground appearance-none"
+          onChange={e => { setSelectedTurma(e.target.value); setSelectedAlunosIds([]); }} value={selectedTurma}>
+          <option value="">Filtrar Turma...</option>
+          {turmasExistentes.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+
+        <div className="flex flex-col gap-1.5 px-1">
+          <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Data do Registo:</label>
+          <input 
+            type="date" 
+            value={selectedDate} 
+            onChange={e => setSelectedDate(e.target.value)}
+            className="w-full p-4 bg-secondary rounded-2xl border border-border outline-none focus:bg-card focus:ring-2 focus:ring-primary/20 transition-all font-semibold text-foreground appearance-none"
+          />
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 gap-2.5 max-h-52 overflow-y-auto no-scrollbar pr-1">
         {alunos.filter(a => a.turma === selectedTurma).map(a => (
