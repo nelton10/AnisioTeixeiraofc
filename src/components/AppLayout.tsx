@@ -35,7 +35,7 @@ const tabs: { id: string; label: string; icon: typeof Clock; hideFor?: string[];
   { id: 'ocorrencias', label: 'Ocorrências', icon: AlertCircle, hideFor: ['aluno', 'parent'] },
   { id: 'historico', label: 'Histórico', icon: History, hideFor: ['aluno', 'parent'] },
   { id: 'avaliar_aula', label: 'Avaliar Aula', icon: Star, hideFor: ['aluno', 'parent'] },
-  { id: 'atrasos', label: 'Entradas', icon: DoorOpen, hideFor: ['professor', 'aluno', 'parent'] },
+  { id: 'atrasos', label: 'Entradas Tardias', icon: DoorOpen, hideFor: ['professor', 'aluno', 'parent'] },
   { id: 'coord', label: 'Coord.', icon: GraduationCap, hideFor: ['aluno', 'parent'], badge: 'coordCount' },
   { id: 'medidas', label: 'Biblioteca', icon: Library, hideFor: ['aluno', 'parent'], badge: 'libraryCount' },
   { id: 'pesquisa', label: 'Pesquisa', icon: Search, hideFor: ['aluno', 'parent'] },
