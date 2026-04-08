@@ -99,6 +99,7 @@ const Index = () => {
             )}
             {state.activeTab === 'atrasos' && (
               <AtrasosTab alunos={state.alunos} turmasExistentes={state.turmasExistentes}
+                records={state.records}
                 username={state.authState.username} notify={state.notify} refreshData={state.refreshData} />
             )}
             {state.activeTab === 'coord' && (
