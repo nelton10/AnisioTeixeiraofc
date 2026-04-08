@@ -23,18 +23,15 @@ const AtrasosTab: React.FC<AtrasosTabProps> = ({ alunos, records, username, noti
   }, [searchTerm, alunos]);
 
   const studentsWithFrequentDelays = useMemo(() => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const thirtyOneDaysAgo = Date.now() - 31 * 24 * 60 * 60 * 1000;
 
-    const delaysThisMonth = records.filter(r => {
+    const delaysLast31Days = records.filter(r => {
       if (r.categoria !== 'atraso') return false;
-      const d = new Date(r.rawTimestamp);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      return r.rawTimestamp >= thirtyOneDaysAgo;
     });
 
     const counts: Record<string, { count: number, name: string, turma: string }> = {};
-    delaysThisMonth.forEach(r => {
+    delaysLast31Days.forEach(r => {
       if (!counts[r.alunoId]) {
         counts[r.alunoId] = { count: 0, name: r.alunoNome, turma: r.turma };
       }
@@ -149,7 +146,7 @@ const AtrasosTab: React.FC<AtrasosTabProps> = ({ alunos, records, username, noti
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-black flex items-center gap-2 text-foreground">
               <AlertCircle size={18} className="text-destructive" strokeWidth={2.5} /> 
-              Alunos com 3+ Atrasos no Mês
+              Alunos com 3+ Atrasos (Últimos 31 Dias)
             </h3>
             <span className="bg-destructive/10 text-destructive text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wider">Atenção</span>
           </div>

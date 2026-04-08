@@ -116,7 +116,6 @@ export function useAppState() {
     // Default: load last 24h on startup (no args = 24h window in store.getHistory)
     refreshHistory();
   }, [refreshData, refreshHistory]);
-
   // Reactive History Sync
   useEffect(() => {
     let startTs: number | undefined;
@@ -133,10 +132,12 @@ export function useAppState() {
         const d = new Date(filtroDataFim); d.setHours(23, 59, 59, 999);
         endTs = d.getTime();
       }
+    } else if (activeTab === 'atrasos') {
+      startTs = Date.now() - 31 * 24 * 60 * 60 * 1000;
     }
 
     refreshHistory(startTs, endTs);
-  }, [verTodoPeriodo, filtroDataInicio, filtroDataFim, refreshHistory]);
+  }, [verTodoPeriodo, filtroDataInicio, filtroDataFim, activeTab, refreshHistory]);
 
   // Real-time subscriptions
   useEffect(() => {
