@@ -133,7 +133,10 @@ export function useAppState() {
         endTs = d.getTime();
       }
     } else if (activeTab === 'atrasos') {
-      startTs = Date.now() - 31 * 24 * 60 * 60 * 1000;
+      const d = new Date();
+      d.setDate(1);
+      d.setHours(0, 0, 0, 0);
+      startTs = d.getTime();
     }
 
     refreshHistory(startTs, endTs);
